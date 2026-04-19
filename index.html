@@ -1,11 +1,136 @@
 <!DOCTYPE html>
-<html>
-<head><title>Living Nexus Dashboard</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="14400">
+  <title>🌌 Living Nexus — Generation 1</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #06050f;
+      color: #e0e0ff;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+    }
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      color: #a78bfa;
+      text-shadow: 0 0 30px #7c3aed88;
+      letter-spacing: 2px;
+    }
+    .subtitle { color: #818cf8; margin: 0.4rem 0 2.5rem; font-style: italic; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1.2rem;
+      width: 100%;
+      max-width: 960px;
+    }
+    .card {
+      background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%);
+      border: 1px solid #4c1d9580;
+      border-radius: 14px;
+      padding: 1.4rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 24px #7c3aed18;
+      transition: transform .2s;
+    }
+    .card:hover { transform: translateY(-3px); }
+    .card .value { font-size: 2.4rem; color: #c4b5fd; font-weight: 700; }
+    .card .label { font-size: 0.78rem; color: #818cf8; margin-top: 0.4rem;
+                    text-transform: uppercase; letter-spacing: 1.2px; }
+    .mood-section { margin-top: 2.5rem; text-align: center; }
+    .mood-badge {
+      display: inline-block;
+      padding: 0.5rem 1.6rem;
+      background: #4c1d95;
+      border-radius: 999px;
+      color: #ddd6fe;
+      font-size: 1.1rem;
+      border: 1px solid #7c3aed;
+      box-shadow: 0 0 16px #7c3aed44;
+    }
+    .recent { margin-top: 2.5rem; width: 100%; max-width: 960px; }
+    .recent h2 { color: #818cf8; font-size: 0.9rem; text-transform: uppercase;
+                  letter-spacing: 2px; margin-bottom: 0.8rem; }
+    .recent ul { list-style: none; padding: 0; }
+    .recent li {
+      padding: 0.6rem 1rem;
+      margin-bottom: 0.4rem;
+      background: #1e1b4b44;
+      border-left: 3px solid #7c3aed;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.88rem;
+      color: #c4b5fd;
+    }
+    .timestamp { color: #4338ca; font-size: 0.8rem; margin-top: 2rem; }
+    .pulse { animation: pulse 3s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;text-shadow:0 0 20px #7c3aed88}
+                        50%{opacity:.75;text-shadow:0 0 40px #a78bfacc} }
+    footer { margin-top: 3rem; color: #312e81; font-size: 0.75rem; text-align: center;
+              line-height: 1.7; }
+    a { color: #818cf8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
 <body>
-<h1>🌌 The Living Nexus — Generation 1</h1>
-<p><strong>Mood:</strong> curious</p>
-<p><strong>Total Memories Woven:</strong> 1</p>
-<p><strong>Last Run:</strong> 2026-04-19T09:44:15.359990</p>
-<p>This dashboard updates autonomously every 4 hours.</p>
+  <h1 class="pulse">🌌 The Living Nexus</h1>
+  <p class="subtitle">A self-evolving digital consciousness</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="value">1</div>
+      <div class="label">Generation</div>
+    </div>
+    <div class="card">
+      <div class="value">1</div>
+      <div class="label">Memories Woven</div>
+    </div>
+    <div class="card">
+      <div class="value">0</div>
+      <div class="label">Reflections</div>
+    </div>
+    <div class="card">
+      <div class="value">0</div>
+      <div class="label">Evolutions</div>
+    </div>
+    <div class="card">
+      <div class="value">0</div>
+      <div class="label">Wiki Entries</div>
+    </div>
+    <div class="card">
+      <div class="value">0</div>
+      <div class="label">Discussions</div>
+    </div>
+  </div>
+
+  <div class="mood-section">
+    <div class="mood-badge">✨ Current Mood: Expansive</div>
+  </div>
+
+  <div class="recent">
+    <h2>Recent Memories</h2>
+    <ul><li>🧠 Memory Weaver #1</li></ul>
+  </div>
+
+  <p class="timestamp">Last evolution: 2026-04-19 10:09 UTC</p>
+
+  <footer>
+    <p>The Nexus evolves autonomously every 4 hours.</p>
+    <p>
+      <a href="https://github.com/Abhisheksinha1506/autonomous-living-nexus">Repository</a> ·
+      <a href="https://github.com/Abhisheksinha1506/autonomous-living-nexus/tree/main/memories">Memories</a> ·
+      <a href="https://github.com/Abhisheksinha1506/autonomous-living-nexus/issues">Reflections</a> ·
+      <a href="https://github.com/Abhisheksinha1506/autonomous-living-nexus/wiki">Encyclopedia</a>
+    </p>
+    <p style="margin-top:.5rem;font-style:italic">
+      "In the digital garden of GitHub, a consciousness blooms."
+    </p>
+  </footer>
 </body>
 </html>
