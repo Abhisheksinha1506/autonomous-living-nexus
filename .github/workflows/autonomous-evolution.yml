@@ -1,0 +1,72 @@
+name: Autonomous Evolution
+
+# SAFETY NOTES:
+# - 4-hour frequency respects GitHub API rate limits while providing regular evolution
+# - Allows sufficient time for human review between autonomous actions
+# - Uses least privilege permissions for security
+# - Includes comprehensive error handling and graceful degradation
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Every 4 hours (6 times daily)
+  workflow_dispatch:  # Manual trigger for testing or immediate evolution
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'evolve.py'
+      - 'state.json'
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    # Least privilege permissions - only what's needed for autonomous operations
+    permissions:
+      contents: write      # For commits, memory files, and wiki updates
+      issues: write        # For creating reflection issues
+      pull-requests: write # For creating major evolution PRs
+      discussions: write   # For weekly status discussions
+      pages: write         # For dashboard deployment
+      # Note: id-token removed as not needed for this workflow
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Use AUTONOMOUS_PAT for enhanced permissions and wiki access
+        token: ${{ secrets.AUTONOMOUS_PAT || secrets.GITHUB_TOKEN }}
+        fetch-depth: 0  # Full history needed for insights and patterns
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install PyGithub==2.3.0 python-dateutil==2.8.2
+
+    - name: Run Autonomous Evolution
+      env:
+        # Primary GitHub token for API operations
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Optional PAT for wiki operations and enhanced permissions
+        PAT: ${{ secrets.AUTONOMOUS_PAT }}
+        # Repository identification
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        REPOSITORY_OWNER: ${{ github.repository_owner }}
+        REPOSITORY_NAME: ${{ github.event.repository.name }}
+        # Run identification
+        RUN_ID: ${{ github.run_id }}
+        RUN_ATTEMPT: ${{ github.run_attempt }}
+      run: |
+        python evolve.py
+
+    - name: Deploy Dashboard
+      if: always()  # Deploy even if evolution fails to show status
+      uses: peaceiris/actions-gh-pages@v4  # Updated to v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dashboard
+        destination_dir: .
+        # Enable automatic deployment to gh-pages branch
