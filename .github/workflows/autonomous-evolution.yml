@@ -2,47 +2,61 @@ name: Autonomous Evolution
 
 on:
   schedule:
-    - cron: '0 */4 * * *'   # Every 4 hours
-  workflow_dispatch:
+    - cron: '0 */4 * * *'   # Every 4 hours, automatically
+  workflow_dispatch:          # Also allow manual trigger
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+# All features need explicit write access.
+# Discussions also needs the GITHUB_TOKEN to have discussions:write,
+# which requires enabling Discussions in repo Settings first.
+permissions:
+  contents:      write
+  issues:        write
+  pull-requests: write
+  discussions:   write
+  pages:         write
+  id-token:      write   # needed for some OIDC flows
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      discussions: write
-      pages: write
 
     steps:
+      # ── 1. Checkout with full history so we can push ──────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.AUTONOMOUS_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0         # full history — needed for git push to work
 
+      # ── 2. Set git identity BEFORE any python git ops ─────────────────────
+      - name: Configure git identity
+        run: |
+          git config user.name  "Living Nexus"
+          git config user.email "nexus@autonomous.bot"
+
+      # ── 3. Python ─────────────────────────────────────────────────────────
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install PyGithub python-dateutil
+      - name: Install Python dependencies
+        run: pip install requests --quiet
 
-      - name: Run Nexus Evolution
+      # ── 4. Run the evolution engine ───────────────────────────────────────
+      - name: Run Evolution Engine
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PAT: ${{ secrets.AUTONOMOUS_PAT }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
-          REPOSITORY_NAME: ${{ github.event.repository.name }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_TOKEN:       ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY:  ${{ github.repository }}
         run: python evolve.py
 
-      - name: Deploy Dashboard
-        if: always()
+      # ── 5. Deploy dashboard to GitHub Pages ───────────────────────────────
+      # Requires: Settings → Pages → Source = "Deploy from a branch" → gh-pages
+      # On first run this step creates the gh-pages branch automatically.
+      - name: Deploy Dashboard to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dashboard
+          publish_dir:  ./dashboard
+          commit_message: "🌐 Dashboard — Generation update"

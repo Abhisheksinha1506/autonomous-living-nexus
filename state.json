@@ -1,5 +1,10 @@
 {
   "generation": 0,
   "total_memories": 0,
-  "mood": "curious"
+  "total_issues": 0,
+  "total_prs": 0,
+  "total_wiki_entries": 0,
+  "total_discussions": 0,
+  "mood": "curious",
+  "last_run": null
 }
