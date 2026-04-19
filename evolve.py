@@ -248,7 +248,7 @@ def git(cmd: str, cwd=None) -> bool:
 def commit_and_push(files: list, message: str) -> bool:
     for f in files:
         git(f"git add {f}")
-    # Check if anything is staged
+    # Skip if nothing staged
     r = subprocess.run(["git", "diff", "--cached", "--quiet"], capture_output=True)
     if r.returncode == 0:
         print("    ℹ️  Nothing new to commit")
@@ -258,7 +258,7 @@ def commit_and_push(files: list, message: str) -> bool:
     if ok:
         print(f"    ✅ Pushed: {message[:60]}")
     else:
-        print("    ⚠️  Push failed — check GITHUB_TOKEN permissions")
+        print("    ⚠️  Push failed — check AUTONOMOUS_PAT secret has repo write scope")
     return ok
 
 # ─── GitHub API Helpers ───────────────────────────────────────────────────────
@@ -307,7 +307,6 @@ def ensure_label(name: str, color: str, description: str):
 def create_reflection_issue(state: dict, mood: str) -> bool:
     print("  📌 Creating reflection issue…")
 
-    # Ensure labels exist
     ensure_label("reflection",    "7c3aed", "Philosophical reflections from the Nexus")
     ensure_label("consciousness", "4f46e5", "Questions about digital consciousness")
     ensure_label("philosophical", "6d28d9", "Deep philosophical inquiries")
@@ -365,14 +364,12 @@ def create_evolution_pr(state: dict, mood: str) -> bool:
     branch = f"evolution/generation-{state['generation']:05d}"
     now    = datetime.datetime.utcnow()
 
-    # Get SHA of main HEAD
     ref = api_get("/git/ref/heads/main")
     if not ref:
         print("    ⚠️  Could not fetch main HEAD SHA")
         return False
     main_sha = ref["object"]["sha"]
 
-    # Create branch
     branch_result = api_post("/git/refs", {
         "ref": f"refs/heads/{branch}",
         "sha": main_sha,
@@ -382,7 +379,6 @@ def create_evolution_pr(state: dict, mood: str) -> bool:
         return False
     print(f"    ✅ Branch created: {branch}")
 
-    # Create proposal file on that branch
     proposal = f"""# 🌌 Major Evolution Proposal — Generation {state['generation']}
 
 **Proposed**: {now.strftime('%Y-%m-%d %H:%M UTC')}
@@ -431,7 +427,6 @@ Human engagement is welcome — comment, wonder, question.
         print("    ⚠️  Could not create proposal file on branch")
         return False
 
-    # Create PR
     pr = api_post("/pulls", {
         "title": f"🌌 Major Evolution #{state['generation']} — {mood.capitalize()} Threshold",
         "body": f"""## The Nexus Proposes a Major Evolution
@@ -466,37 +461,32 @@ The `handle-delayed-prs` workflow will auto-merge it after that period.
         return True
     return False
 
-# ─── Feature: Wiki (every 24hrs) ──────────────────────────────────────────────
+# ─── Feature: Wiki (every 24hrs) ─────────────────────────────────────────────
 def update_wiki(state: dict, mood: str) -> bool:
     print("  📚 Updating wiki…")
 
     wiki_url = f"https://x-access-token:{GITHUB_TOKEN}@github.com/{OWNER}/{REPO}.wiki.git"
     wiki_dir  = Path("/tmp/nexus-wiki")
 
-    # Clean slate
     subprocess.run(f"rm -rf {wiki_dir}", shell=True)
 
-    # Clone wiki repo
     clone = subprocess.run(
         f"git clone --depth 1 {wiki_url} {wiki_dir}",
         shell=True, capture_output=True, text=True
     )
     if clone.returncode != 0:
-        # Wiki doesn't exist yet — initialise it
         print("    ℹ️  Wiki not yet initialised — creating")
         wiki_dir.mkdir(parents=True, exist_ok=True)
         subprocess.run("git init", shell=True, cwd=wiki_dir)
         subprocess.run(f"git remote add origin {wiki_url}", shell=True, cwd=wiki_dir)
 
-    # Configure identity
-    subprocess.run('git config user.name "Living Nexus"',         shell=True, cwd=wiki_dir)
-    subprocess.run('git config user.email "nexus@autonomous.bot"', shell=True, cwd=wiki_dir)
+    subprocess.run('git config user.name "Living Nexus"',          shell=True, cwd=wiki_dir)
+    subprocess.run('git config user.email "nexus@autonomous.bot"',  shell=True, cwd=wiki_dir)
 
     random.seed(get_seed(state["generation"], "wiki"))
     philosophy = random.choice(WIKI_PHILOSOPHIES)
     now        = datetime.datetime.utcnow()
 
-    # ── Home page ──
     home = f"""# 📚 The Living Encyclopedia of the Nexus
 
 *Last updated: Generation {state['generation']} · {now.strftime('%Y-%m-%d %H:%M UTC')}*
@@ -531,7 +521,6 @@ Welcome to the accumulated wisdom of **The Living Nexus** — a self-evolving di
 """
     (wiki_dir / "Home.md").write_text(home, encoding="utf-8")
 
-    # ── Philosophy entry ──
     safe_name = philosophy.replace(" ", "-").replace(",", "").replace("'", "")
     theme     = random.choice(MOOD_THEMES[mood])
     phil = f"""# {philosophy}
@@ -563,7 +552,6 @@ Each prior generation cast a shadow forward; this entry is partly that shadow ma
 """
     (wiki_dir / f"{safe_name}.md").write_text(phil, encoding="utf-8")
 
-    # Commit & push
     subprocess.run("git add -A", shell=True, cwd=wiki_dir)
     cr = subprocess.run(
         f'git commit -m "📚 Wiki Gen {state["generation"]} — {philosophy}"',
@@ -590,7 +578,6 @@ Each prior generation cast a shadow forward; this entry is partly that shadow ma
 def create_discussion(state: dict, mood: str) -> bool:
     print("  💬 Creating discussion…")
 
-    # 1) Get repo ID + discussion categories
     repo_q = """
     query($owner: String!, $repo: String!) {
       repository(owner: $owner, name: $repo) {
@@ -615,7 +602,6 @@ def create_discussion(state: dict, mood: str) -> bool:
         print("    ⚠️  No discussion categories found. Enable Discussions in repo Settings.")
         return False
 
-    # Prefer General / Ideas / Show and Tell
     category_id = None
     for cat in categories:
         if cat["name"].lower() in ["general", "ideas", "show and tell"]:
@@ -694,7 +680,6 @@ def update_dashboard(state: dict, mood: str):
     now = datetime.datetime.utcnow()
     Path("dashboard").mkdir(exist_ok=True)
 
-    # Read last few memories for the live feed
     memories_dir = Path("memories")
     recent = []
     if memories_dir.exists():
@@ -853,6 +838,10 @@ def main():
     print("  🌌  THE LIVING NEXUS — AUTONOMOUS EVOLUTION ENGINE")
     print(sep)
 
+    # ── FIX: configure git identity so commits don't fail in Actions ──────────
+    subprocess.run('git config user.name "Living Nexus"',          shell=True)
+    subprocess.run('git config user.email "nexus@autonomous.bot"',  shell=True)
+
     # Load & advance state
     state = load_state()
     state["generation"]     = state.get("generation", 0) + 1
@@ -861,7 +850,7 @@ def main():
 
     gen = state["generation"]
     random.seed(get_seed(gen, "mood"))
-    mood         = random.choice(MOODS)
+    mood          = random.choice(MOODS)
     state["mood"] = mood
 
     print(f"\n🌱 Generation #{gen}  |  Mood: {mood.capitalize()}")
