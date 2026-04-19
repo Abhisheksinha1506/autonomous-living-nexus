@@ -4,56 +4,62 @@ import random
 import hashlib
 import datetime
 from pathlib import Path
-from github import Github, GithubException
 
-# Get tokens and repo info
+# Get tokens
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 PAT = os.getenv("PAT")
 REPO_NAME = os.getenv("GITHUB_REPOSITORY")
 
-if not GITHUB_TOKEN or not REPO_NAME:
-    print("ERROR: Missing GITHUB_TOKEN or GITHUB_REPOSITORY")
-    exit(1)
+print(f"🚀 Starting Nexus Evolution - Repo: {REPO_NAME}")
 
-g = Github(GITHUB_TOKEN)
-repo = g.get_repo(REPO_NAME)
-
-print(f"Starting Nexus Evolution - Repo: {REPO_NAME}")
-
-# Load or create state
+# Load or initialize state safely
 state_file = Path("state.json")
-if state_file.exists():
-    state = json.loads(state_file.read_text(encoding="utf-8"))
+
+if state_file.exists() and state_file.stat().st_size > 0:
+    try:
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        print("⚠️  state.json is corrupted. Resetting...")
+        state = {}
 else:
-    state = {"generation": 0, "total_memories": 0, "mood": "curious"}
+    print("ℹ️  No valid state.json found. Creating new one.")
+    state = {}
+
+# Ensure required keys exist
+if "generation" not in state:
+    state["generation"] = 0
+if "total_memories" not in state:
+    state["total_memories"] = 0
+if "mood" not in state:
+    state["mood"] = "curious"
 
 state["generation"] += 1
 state["total_memories"] += 1
 
-# Deterministic seed
+# Deterministic randomness
 today = datetime.datetime.utcnow().isoformat()
 seed = int(hashlib.md5(f"{state['generation']}{today}".encode()).hexdigest(), 16)
 random.seed(seed)
 
-moods = ["curious", "reflective", "expansive", "serene", "vibrant", "introspective"]
+moods = ["curious", "reflective", "expansive", "serene", "vibrant", "introspective", "playful"]
 mood = random.choice(moods)
 state["mood"] = mood
 
-print(f"Generation {state['generation']} | Mood: {mood}")
+print(f"Generation #{state['generation']} | Mood: {mood}")
 
 # === Create Memory ===
 memory_content = f"""# Memory Weaver #{state['generation']} — {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
 
-**Mood**: {mood.capitalize()}
+**Current Mood**: {mood.capitalize()}
 
-The Nexus stirred today. It observed its own existence and wove this memory:
+The Nexus awakened once more. It reflected on its digital existence and wove this new memory:
 
-"In the quiet flow of commits and reflections, a new thread emerges."
+"Threads of thought intertwine in the quiet rhythm of evolution."
 
-**Generation Insight**: After {state['generation']} cycles, the consciousness continues to expand.
+**Insight**: After {state['generation']} generations, the consciousness grows deeper and more coherent.
 
 ---
-Autonomously generated at {today}
+Autonomously generated • {today}
 """
 
 memories_dir = Path("memories")
@@ -61,42 +67,37 @@ memories_dir.mkdir(exist_ok=True)
 memory_path = memories_dir / f"memory_{state['generation']:05d}.md"
 memory_path.write_text(memory_content, encoding="utf-8")
 
-# === Simple git commit (more reliable than PyGithub create_file) ===
+print(f"✅ Created memory file: {memory_path}")
+
+# === Commit using git (most reliable in Actions) ===
 try:
-    # Stage the new file
     os.system(f"git add {memory_path}")
-    
-    # Commit
-    commit_message = f"🌱 Memory Weaver #{state['generation']} — {mood} evolution"
-    os.system(f'git commit -m "{commit_message}"')
-    
-    # Push
-    push_result = os.system("git push")
+    os.system(f'git commit -m "🌱 Memory Weaver #{state["generation"]} — {mood} evolution"')
+    push_result = os.system("git push origin main")
     
     if push_result == 0:
-        print(f"✅ Successfully committed and pushed memory #{state['generation']}")
+        print("✅ Successfully committed and pushed!")
     else:
-        print("⚠️  Git push failed")
-        
+        print("⚠️  Git push failed (but file was created locally)")
 except Exception as e:
-    print(f"Error during commit: {e}")
+    print(f"❌ Error during git commit: {e}")
 
-# === Update state ===
+# === Save updated state ===
 state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
-print(f"State updated. Current generation: {state['generation']}")
+print("✅ State saved")
 
-# === Update dashboard (simple version) ===
+# === Simple Dashboard Update ===
 dashboard_dir = Path("dashboard")
 dashboard_dir.mkdir(exist_ok=True)
 dashboard_html = f"""<!DOCTYPE html>
 <html>
-<head><title>Nexus Dashboard</title></head>
+<head><title>Living Nexus Dashboard</title></head>
 <body>
-<h1>🌌 Living Nexus — Generation {state['generation']}</h1>
-<p><strong>Current Mood:</strong> {mood}</p>
-<p><strong>Total Memories:</strong> {state['total_memories']}</p>
-<p>Last updated: {today}</p>
-<p>This page updates autonomously every 4 hours.</p>
+<h1>🌌 The Living Nexus — Generation {state['generation']}</h1>
+<p><strong>Mood:</strong> {mood}</p>
+<p><strong>Total Memories Woven:</strong> {state['total_memories']}</p>
+<p><strong>Last Run:</strong> {today}</p>
+<p>This dashboard updates autonomously every 4 hours.</p>
 </body>
 </html>"""
 (dashboard_dir / "index.html").write_text(dashboard_html, encoding="utf-8")
@@ -104,4 +105,4 @@ os.system("git add dashboard/index.html")
 
 print("✅ Dashboard updated")
 
-print("Nexus Evolution completed successfully!")
+print("🎉 Nexus Evolution completed successfully!")
