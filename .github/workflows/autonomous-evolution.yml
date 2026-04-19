@@ -1,70 +1,48 @@
 name: Autonomous Evolution
 
-# SAFETY NOTES:
-# - 4-hour frequency respects GitHub API rate limits while providing regular evolution
-# - Allows sufficient time for human review between autonomous actions
-# - Uses least privilege permissions for security
-# - Includes comprehensive error handling and graceful degradation
-
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Every 4 hours (6 times daily)
-  workflow_dispatch:  # Manual trigger for testing or immediate evolution
-  push:
-    branches: [ main, master ]
-    paths:
-      - 'evolve.py'
-      - 'state.json'
+    - cron: '0 */4 * * *'   # Every 4 hours
+  workflow_dispatch:
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
     permissions:
-      contents: write          # Required to commit new memory files
-      issues: write            # Required to create reflection issues
-      pull-requests: write     # Required to create PRs
-      discussions: write       # Required to post weekly discussions
-      pages: write             # Required for deploying the dashboard
+      contents: write
+      issues: write
+      pull-requests: write
+      discussions: write
+      pages: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        # Use AUTONOMOUS_PAT for enhanced permissions and wiki access
-        token: ${{ secrets.AUTONOMOUS_PAT }}
-        fetch-depth: 0  # Full history needed for insights and patterns
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.AUTONOMOUS_PAT }}
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install PyGithub==2.3.0 python-dateutil==2.8.2
+      - name: Install dependencies
+        run: pip install PyGithub python-dateutil
 
-    - name: Run Autonomous Evolution
-      env:
-        # Primary GitHub token for API operations
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Optional PAT for wiki operations and enhanced permissions
-        PAT: ${{ secrets.AUTONOMOUS_PAT }}
-        # Repository identification
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        REPOSITORY_OWNER: ${{ github.repository_owner }}
-        REPOSITORY_NAME: ${{ github.event.repository.name }}
-        # Run identification
-        RUN_ID: ${{ github.run_id }}
-        RUN_ATTEMPT: ${{ github.run_attempt }}
-      run: |
-        python evolve.py
+      - name: Run Nexus Evolution
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAT: ${{ secrets.AUTONOMOUS_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: python evolve.py
 
-    - name: Deploy Dashboard
-      if: always()  # Deploy even if evolution fails to show status
-      uses: peaceiris/actions-gh-pages@v4  # Updated to v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dashboard
-        destination_dir: .
-        # Enable automatic deployment to gh-pages branch
+      - name: Deploy Dashboard
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dashboard
