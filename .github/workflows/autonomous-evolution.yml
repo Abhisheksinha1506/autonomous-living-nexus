@@ -6,6 +6,9 @@ name: Autonomous Evolution
 # - Uses least privilege permissions for security
 # - Includes comprehensive error handling and graceful degradation
 
+# Explicitly deny all permissions at workflow level, then grant only what the job needs
+permissions: {}
+
 on:
   schedule:
     - cron: '0 */4 * * *'  # Every 4 hours (6 times daily)
@@ -19,14 +22,13 @@ on:
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    # Least privilege permissions - only what's needed for autonomous operations
+    # Enhanced least privilege permissions - only what's needed for autonomous operations
     permissions:
-      contents: write      # For commits, memory files, and wiki updates
-      issues: write        # For creating reflection issues
-      pull-requests: write # For creating major evolution PRs
-      discussions: write   # For weekly status discussions
-      pages: write         # For dashboard deployment
-      # Note: id-token removed as not needed for this workflow
+      contents: write          # Required to commit new memory files
+      issues: write            # Required to create reflection issues
+      pull-requests: write     # Required to create PRs
+      discussions: write       # Required to post weekly discussions
+      pages: write             # Required for deploying the dashboard
 
     steps:
     - name: Checkout repository
