@@ -6,9 +6,6 @@ name: Autonomous Evolution
 # - Uses least privilege permissions for security
 # - Includes comprehensive error handling and graceful degradation
 
-# Explicitly deny all permissions at workflow level, then grant only what the job needs
-permissions: {}
-
 on:
   schedule:
     - cron: '0 */4 * * *'  # Every 4 hours (6 times daily)
@@ -22,7 +19,6 @@ on:
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    # Enhanced least privilege permissions - only what's needed for autonomous operations
     permissions:
       contents: write          # Required to commit new memory files
       issues: write            # Required to create reflection issues
@@ -35,7 +31,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         # Use AUTONOMOUS_PAT for enhanced permissions and wiki access
-        token: ${{ secrets.AUTONOMOUS_PAT || secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.AUTONOMOUS_PAT }}
         fetch-depth: 0  # Full history needed for insights and patterns
 
     - name: Setup Python
