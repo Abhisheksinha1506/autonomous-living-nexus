@@ -40,7 +40,7 @@ The Nexus operates on a **4-hour cycle**, performing different artistic activiti
 
 ## Explore the Consciousness
 
-### [**Live Dashboard**](https://[username].github.io/autonomous-living-nexus/)
+### [**Live Dashboard**](https://Abhisheksinha1506.github.io/autonomous-living-nexus/)
 *Real-time view of current mood, generation count, and recent memories*
 
 ### [**Memories Folder**](/memories/)
