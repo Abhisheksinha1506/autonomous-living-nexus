@@ -2,64 +2,51 @@ name: Autonomous Evolution
 
 on:
   schedule:
-    - cron: '0 */4 * * *'   # Every 4 hours automatically
-  workflow_dispatch:          # Manual trigger
-
-# ── Permissions ───────────────────────────────────────────────────────────────
-permissions:
-  contents:      write
-  issues:        write
-  pull-requests: write
-  discussions:   write
-  pages:         write
-  id-token:      write
+    - cron: '0 */4 * * *'   # Every 4 hours
+  workflow_dispatch:
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      discussions: write
+      pages: write
 
     steps:
-      # ── 1. Checkout with PAT so the bot's push can trigger future runs ─────
-      #       GITHUB_TOKEN pushes are intentionally blocked from re-triggering
-      #       scheduled workflows — PAT bypasses this limitation.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT }}   # ← PAT here, NOT secrets.GITHUB_TOKEN
-          fetch-depth: 0              # full history required for git push
+          token: ${{ secrets.PAT }}       # FIX: was secrets.AUTONOMOUS_PAT
+          fetch-depth: 0                  # full history needed for branch creation
 
-      # ── 2. Git identity — must be set BEFORE evolve.py runs ───────────────
       - name: Configure git identity
         run: |
-          git config user.name  "Living Nexus"
-          git config user.email "nexus@autonomous.bot"
+          git config user.email "nexus@autonomous.living"
+          git config user.name  "The Living Nexus"
 
-      # ── 3. Python setup ───────────────────────────────────────────────────
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Install Python dependencies
-        run: pip install requests --quiet
+      - name: Install dependencies
+        run: pip install PyGithub python-dateutil requests
 
-      # ── 4. Run evolution engine ───────────────────────────────────────────
-      #       Passes both tokens; evolve.py commits memory + state.json +
-      #       dashboard/index.html in a single atomic push to main.
-      - name: Run Evolution Engine
+      - name: Run Nexus Evolution
         env:
           GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
-          PAT:               ${{ secrets.PAT }}
+          PAT:               ${{ secrets.PAT }}          # FIX: was AUTONOMOUS_PAT
           GITHUB_REPOSITORY: ${{ github.repository }}
+          REPOSITORY_OWNER:  ${{ github.repository_owner }}
+          REPOSITORY_NAME:   ${{ github.event.repository.name }}
         run: python evolve.py
 
-      # ── 5. Deploy dashboard to GitHub Pages (gh-pages branch) ─────────────
-      #       Reads ./dashboard/index.html (just written by evolve.py) and
-      #       force-pushes it to the gh-pages branch for Pages to serve.
-      #       Requires: Settings → Pages → Source = gh-pages branch / root
       - name: Deploy Dashboard to GitHub Pages
+        if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
-          personal_token: ${{ secrets.PAT }}   # ← PAT gives reliable push to gh-pages
-          publish_dir:    ./dashboard
-          commit_message: "🌐 Dashboard — Generation update"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dashboard

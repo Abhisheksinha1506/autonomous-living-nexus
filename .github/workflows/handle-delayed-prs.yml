@@ -1,88 +1,117 @@
 name: Handle Delayed Pull Requests
 
+# Runs every 6 hours and merges any "Major Evolution" PRs
+# that have been open for at least 48 hours — the contemplation period.
+
 on:
   schedule:
-    - cron: '0 2 * * *'   # Daily at 02:00 UTC — checks for PRs older than 48hrs
+    - cron: '30 */6 * * *'   # Every 6 hours (offset from main workflow)
   workflow_dispatch:
-
-permissions:
-  contents:      write
-  pull-requests: write
-  issues:        write
 
 jobs:
   handle-prs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
-      - name: Auto-merge aged Evolution PRs
-        uses: actions/github-script@v7
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo:  context.repo.repo,
-              state: 'open',
-            });
+          token: ${{ secrets.PAT }}
 
-            const now = new Date();
-            let merged = 0, skipped = 0;
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-            for (const pr of prs) {
-              const isEvolution = pr.title.includes('Major Evolution');
-              if (!isEvolution) { skipped++; continue; }
+      - name: Install dependencies
+        run: pip install PyGithub python-dateutil requests
 
-              const created   = new Date(pr.created_at);
-              const hoursOpen = (now - created) / (1000 * 60 * 60);
+      - name: Process delayed PRs
+        env:
+          PAT:               ${{ secrets.PAT }}
+          GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python << 'EOF'
+          import os, datetime
+          from github import Github
+          from dateutil import parser as dateparser
 
-              console.log(`PR #${pr.number} "${pr.title}" — open ${hoursOpen.toFixed(1)} hrs`);
+          TOKEN     = os.getenv("PAT") or os.getenv("GITHUB_TOKEN")
+          REPO_NAME = os.getenv("GITHUB_REPOSITORY")
+          THRESHOLD = datetime.timedelta(hours=48)
 
-              if (hoursOpen < 48) {
-                console.log(`  ⏳ Contemplation period not yet complete (need 48hrs)`);
-                skipped++;
-                continue;
-              }
+          if not TOKEN or not REPO_NAME:
+              print("⚠️  Missing token or repo — aborting")
+              exit(0)
 
-              // Post a closing comment
-              await github.rest.issues.createComment({
-                owner:        context.repo.owner,
-                repo:         context.repo.repo,
-                issue_number: pr.number,
-                body: [
-                  '🌌 **The contemplation period has passed.**',
-                  '',
-                  `After ${Math.floor(hoursOpen)} hours of open reflection, the Nexus integrates this evolution.`,
-                  '',
-                  '*Auto-merged by the Living Nexus handle-delayed-prs workflow.*',
-                ].join('\n'),
-              });
+          g    = Github(TOKEN)
+          repo = g.get_repo(REPO_NAME)
+          now  = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
 
-              // Attempt merge
-              try {
-                await github.rest.pulls.merge({
-                  owner:         context.repo.owner,
-                  repo:          context.repo.repo,
-                  pull_number:   pr.number,
-                  merge_method:  'squash',
-                  commit_title:  `🌌 ${pr.title} — integrated after contemplation`,
-                  commit_message: `Merged after ${Math.floor(hoursOpen)} hours of contemplation.`,
-                });
-                console.log(`  ✅ PR #${pr.number} merged`);
-                merged++;
-              } catch (e) {
-                console.log(`  ⚠️  Could not auto-merge PR #${pr.number}: ${e.message}`);
-                // Add a label to flag it for manual attention
-                try {
-                  await github.rest.issues.addLabels({
-                    owner:        context.repo.owner,
-                    repo:         context.repo.repo,
-                    issue_number: pr.number,
-                    labels:       ['needs-manual-merge'],
-                  });
-                } catch (_) {}
-                skipped++;
-              }
-            }
+          open_prs = list(repo.get_pulls(state="open"))
+          print(f"Found {len(open_prs)} open PR(s)")
 
-            console.log(`\nDone. Merged: ${merged} | Skipped/ineligible: ${skipped}`);
+          for pr in open_prs:
+              age = now - pr.created_at
+              is_evolution = (
+                  pr.head.ref.startswith("evolution/") or
+                  "Major Evolution" in pr.title
+              )
+
+              print(f"PR #{pr.number}: '{pr.title}' | age={age} | evolution={is_evolution}")
+
+              if not is_evolution:
+                  print(f"  → Skipping (not a Major Evolution PR)")
+                  continue
+
+              if age < THRESHOLD:
+                  remaining = THRESHOLD - age
+                  hrs = int(remaining.total_seconds() // 3600)
+                  mins = int((remaining.total_seconds() % 3600) // 60)
+                  print(f"  → Still in contemplation period ({hrs}h {mins}m remaining)")
+                  pr.create_issue_comment(
+                      f"🕰️ **Contemplation period in progress.**\n\n"
+                      f"This Major Evolution PR will be automatically merged in "
+                      f"approximately **{hrs} hours {mins} minutes**.\n\n"
+                      f"*Feel free to comment your reflections before it merges.*"
+                  )
+                  continue
+
+              # Attempt merge
+              try:
+                  result = pr.merge(
+                      commit_title=f"🌌 {pr.title} [auto-merged after 48h contemplation]",
+                      commit_message=(
+                          f"This Major Evolution PR was automatically merged after "
+                          f"the 48-hour contemplation period.\n\n"
+                          f"Opened: {pr.created_at.isoformat()}\n"
+                          f"Merged: {now.isoformat()}"
+                      ),
+                      merge_method="squash",
+                  )
+                  print(f"  ✅ Merged PR #{pr.number}: {result.merged}")
+
+                  # Delete the evolution branch
+                  try:
+                      ref = repo.get_git_ref(f"heads/{pr.head.ref}")
+                      ref.delete()
+                      print(f"  ✅ Deleted branch: {pr.head.ref}")
+                  except Exception as e:
+                      print(f"  ⚠️  Could not delete branch: {e}")
+
+              except Exception as e:
+                  print(f"  ❌ Merge failed for PR #{pr.number}: {e}")
+                  pr.create_issue_comment(
+                      f"⚠️ **Auto-merge failed.**\n\n"
+                      f"The contemplation period has ended but the PR could not be "
+                      f"merged automatically (possibly a conflict). "
+                      f"Please review and merge manually.\n\n"
+                      f"Error: `{e}`"
+                  )
+
+          print("✅ Delayed PR handler complete")
+          EOF
