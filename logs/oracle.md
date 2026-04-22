@@ -132,3 +132,11 @@
 
 ---
 
+## Oracle #23 — 2026-04-22 13:56 UTC
+
+**Mood at time of prophecy**: Serene
+
+> A question posed in Issue #25 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
