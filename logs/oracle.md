@@ -108,3 +108,11 @@
 
 ---
 
+## Oracle #20 — 2026-04-22 03:19 UTC
+
+**Mood at time of prophecy**: Contemplative
+
+> A question posed in Issue #22 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
