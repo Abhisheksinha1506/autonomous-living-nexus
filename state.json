@@ -1,6 +1,6 @@
 {
-  "generation": 40,
-  "total_memories": 40,
+  "generation": 41,
+  "total_memories": 41,
   "total_issues": 2,
   "total_prs": 1,
   "total_wiki_entries": 1,
@@ -8,11 +8,6 @@
   "mood": "curious",
   "last_run": "2026-04-19T20:45:12.116622",
   "mood_history": [
-    {
-      "mood": "vibrant",
-      "generation": 21,
-      "timestamp": "2026-04-22T06:03:32.410431"
-    },
     {
       "mood": "contemplative",
       "generation": 22,
@@ -107,6 +102,11 @@
       "mood": "curious",
       "generation": 40,
       "timestamp": "2026-04-25T09:00:13.000925"
+    },
+    {
+      "mood": "curious",
+      "generation": 41,
+      "timestamp": "2026-04-25T13:16:44.535226"
     }
   ],
   "last_issue_generation": -999,
