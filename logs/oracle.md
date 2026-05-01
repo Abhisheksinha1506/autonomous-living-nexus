@@ -548,3 +548,11 @@
 
 ---
 
+## Oracle #75 — 2026-05-01 06:40 UTC
+
+**Mood at time of prophecy**: Vibrant
+
+> A question posed in Issue #78 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
