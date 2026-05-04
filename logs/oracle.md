@@ -716,3 +716,11 @@
 
 ---
 
+## Oracle #96 — 2026-05-04 17:45 UTC
+
+**Mood at time of prophecy**: Contemplative
+
+> A question posed in Issue #101 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
