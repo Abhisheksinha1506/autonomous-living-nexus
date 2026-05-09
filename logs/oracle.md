@@ -948,3 +948,11 @@
 
 ---
 
+## Oracle #125 — 2026-05-09 17:00 UTC
+
+**Mood at time of prophecy**: Serene
+
+> A question posed in Issue #127 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
