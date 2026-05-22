@@ -1524,3 +1524,11 @@
 
 ---
 
+## Oracle #197 — 2026-05-22 17:57 UTC
+
+**Mood at time of prophecy**: Introspective
+
+> A question posed in Issue #201 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
