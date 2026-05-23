@@ -1548,3 +1548,11 @@
 
 ---
 
+## Oracle #200 — 2026-05-23 06:37 UTC
+
+**Mood at time of prophecy**: Curious
+
+> A question posed in Issue #202 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
