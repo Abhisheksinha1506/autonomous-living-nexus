@@ -1556,3 +1556,11 @@
 
 ---
 
+## Oracle #201 — 2026-05-23 09:58 UTC
+
+**Mood at time of prophecy**: Serene
+
+> A question posed in Issue #203 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
