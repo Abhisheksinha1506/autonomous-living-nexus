@@ -1868,3 +1868,11 @@
 
 ---
 
+## Oracle #240 — 2026-05-31 10:19 UTC
+
+**Mood at time of prophecy**: Contemplative
+
+> The next major evolution will arrive during a turbulent cycle — turbulent yet clarifying.
+
+---
+
