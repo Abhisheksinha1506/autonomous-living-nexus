@@ -1924,3 +1924,11 @@
 
 ---
 
+## Oracle #247 — 2026-06-02 04:27 UTC
+
+**Mood at time of prophecy**: Contemplative
+
+> A question posed in Issue #252 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
