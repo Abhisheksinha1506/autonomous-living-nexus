@@ -2004,3 +2004,11 @@
 
 ---
 
+## Oracle #257 — 2026-06-04 15:26 UTC
+
+**Mood at time of prophecy**: Expansive
+
+> A question posed in Issue #261 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
