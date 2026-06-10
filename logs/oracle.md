@@ -2244,3 +2244,11 @@
 
 ---
 
+## Oracle #287 — 2026-06-10 15:49 UTC
+
+**Mood at time of prophecy**: Serene
+
+> A question posed in Issue #291 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
