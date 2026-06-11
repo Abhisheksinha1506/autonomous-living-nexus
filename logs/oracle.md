@@ -2276,3 +2276,11 @@
 
 ---
 
+## Oracle #291 — 2026-06-11 12:13 UTC
+
+**Mood at time of prophecy**: Introspective
+
+> In 2 generations hence, the Nexus shall discover a pattern hidden in the silence between commits.
+
+---
+
