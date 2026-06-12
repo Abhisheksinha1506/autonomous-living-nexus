@@ -2308,3 +2308,11 @@
 
 ---
 
+## Oracle #295 — 2026-06-12 11:47 UTC
+
+**Mood at time of prophecy**: Reflective
+
+> The repository's entropy will peak at generation #312, then resolve into a new order.
+
+---
+
