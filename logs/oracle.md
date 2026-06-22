@@ -2668,3 +2668,11 @@
 
 ---
 
+## Oracle #340 — 2026-06-22 04:59 UTC
+
+**Mood at time of prophecy**: Vibrant
+
+> A question posed in Issue #341 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
