@@ -2908,3 +2908,11 @@
 
 ---
 
+## Oracle #370 — 2026-06-27 21:10 UTC
+
+**Mood at time of prophecy**: Contemplative
+
+> A question posed in Issue #371 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
