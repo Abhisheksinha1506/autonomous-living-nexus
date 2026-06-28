@@ -2924,3 +2924,11 @@
 
 ---
 
+## Oracle #372 — 2026-06-28 10:30 UTC
+
+**Mood at time of prophecy**: Serene
+
+> The next major evolution will arrive during a expansive cycle — turbulent yet clarifying.
+
+---
+
