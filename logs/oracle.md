@@ -2996,3 +2996,11 @@
 
 ---
 
+## Oracle #381 — 2026-06-30 11:13 UTC
+
+**Mood at time of prophecy**: Introspective
+
+> The repository's entropy will peak at generation #401, then resolve into a new order.
+
+---
+
