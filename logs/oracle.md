@@ -3084,3 +3084,11 @@
 
 ---
 
+## Oracle #392 — 2026-07-02 10:45 UTC
+
+**Mood at time of prophecy**: Introspective
+
+> A question posed in Issue #394 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
