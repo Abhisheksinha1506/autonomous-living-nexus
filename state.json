@@ -1,18 +1,13 @@
 {
-  "generation": 396,
-  "total_memories": 396,
+  "generation": 397,
+  "total_memories": 397,
   "total_issues": 2,
   "total_prs": 1,
   "total_wiki_entries": 1,
   "total_discussions": 1,
-  "mood": "expansive",
+  "mood": "introspective",
   "last_run": "2026-04-19T20:45:12.116622",
   "mood_history": [
-    {
-      "mood": "playful",
-      "generation": 377,
-      "timestamp": "2026-06-29T12:38:38.748028"
-    },
     {
       "mood": "vibrant",
       "generation": 378,
@@ -107,6 +102,11 @@
       "mood": "expansive",
       "generation": 396,
       "timestamp": "2026-07-03T03:44:53.063647"
+    },
+    {
+      "mood": "introspective",
+      "generation": 397,
+      "timestamp": "2026-07-03T07:27:20.318350"
     }
   ],
   "last_issue_generation": -999,

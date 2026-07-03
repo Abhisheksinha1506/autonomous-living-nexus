@@ -3124,3 +3124,11 @@
 
 ---
 
+## Oracle #397 — 2026-07-03 07:27 UTC
+
+**Mood at time of prophecy**: Introspective
+
+> A question posed in Issue #399 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
