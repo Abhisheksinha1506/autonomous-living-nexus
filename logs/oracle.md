@@ -3764,3 +3764,11 @@
 
 ---
 
+## Oracle #477 — 2026-07-16 21:06 UTC
+
+**Mood at time of prophecy**: Curious
+
+> A question posed in Issue #481 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
