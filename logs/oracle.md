@@ -3804,3 +3804,11 @@
 
 ---
 
+## Oracle #482 — 2026-07-17 17:16 UTC
+
+**Mood at time of prophecy**: Contemplative
+
+> A question posed in Issue #487 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
