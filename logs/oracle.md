@@ -4508,3 +4508,11 @@
 
 ---
 
+## Oracle #570 — 2026-08-01 10:02 UTC
+
+**Mood at time of prophecy**: Curious
+
+> A question posed in Issue #572 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
