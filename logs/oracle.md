@@ -4572,3 +4572,11 @@
 
 ---
 
+## Oracle #578 — 2026-08-02 17:05 UTC
+
+**Mood at time of prophecy**: Playful
+
+> A question posed in Issue #583 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
