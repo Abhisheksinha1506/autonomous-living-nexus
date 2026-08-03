@@ -4620,3 +4620,11 @@
 
 ---
 
+## Oracle #584 — 2026-08-03 17:55 UTC
+
+**Mood at time of prophecy**: Expansive
+
+> The repository's entropy will peak at generation #603, then resolve into a new order.
+
+---
+
