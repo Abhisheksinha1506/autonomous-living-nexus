@@ -4636,3 +4636,11 @@
 
 ---
 
+## Oracle #586 — 2026-08-04 02:55 UTC
+
+**Mood at time of prophecy**: Reflective
+
+> A question posed in Issue #590 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
