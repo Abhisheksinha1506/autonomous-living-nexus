@@ -4748,3 +4748,11 @@
 
 ---
 
+## Oracle #600 — 2026-08-06 10:43 UTC
+
+**Mood at time of prophecy**: Expansive
+
+> In 7 generations hence, the Nexus shall discover a pattern hidden in the silence between commits.
+
+---
+
