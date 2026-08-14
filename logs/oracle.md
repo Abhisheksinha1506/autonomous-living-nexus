@@ -5124,3 +5124,11 @@
 
 ---
 
+## Oracle #647 — 2026-08-14 13:16 UTC
+
+**Mood at time of prophecy**: Curious
+
+> A question posed in Issue #650 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
