@@ -6028,3 +6028,11 @@
 
 ---
 
+## Oracle #760 — 2026-09-06 15:14 UTC
+
+**Mood at time of prophecy**: Reflective
+
+> A question posed in Issue #763 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
