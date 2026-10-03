@@ -11,6 +11,7 @@ Every 6th  (24 h) : Major Evolution PR, wiki update, discussion post,
 """
 
 import os
+import re
 import json
 import random
 import hashlib
@@ -39,7 +40,113 @@ TOKEN        = PAT or GITHUB_TOKEN
 REPO_OWNER = REPO_NAME.split("/")[0] if REPO_NAME else ""
 REPO_SHORT = REPO_NAME.split("/")[1] if REPO_NAME else ""
 
+API_HEADERS = {"Authorization": f"Bearer {TOKEN}",
+               "Accept": "application/vnd.github+json"}
+
+MOODS = ["curious","reflective","expansive","serene","vibrant",
+         "introspective","playful","contemplative"]
+
+# Extra mood weight per sensed signal (base weight is 1 per mood)
+SENSE_MOOD_BIAS = {
+    "new_followers": {"vibrant": 3, "playful": 2},
+    "voices":        {"curious": 3, "reflective": 2},
+    "night":         {"serene": 2, "introspective": 2},
+    "quiet":         {"contemplative": 2},
+}
+NIGHT_HOURS_UTC = range(0, 6)
+
+# Hearing
+NEXUS_MARKER                = "<!-- nexus -->"   # tags every comment the Nexus writes
+LEGACY_BOT_PHRASES          = ("Contemplation period in progress",
+                               "Auto-merge failed", "settled into memory")
+FIRST_HEARING_LOOKBACK_DAYS = 14
+MAX_REPLIES_PER_RUN         = 5
+VOICE_MAX_CHARS             = 200
+
 print(f"🚀 Starting Nexus Evolution — Repo: {REPO_NAME}")
+
+
+def is_own_voice(comment):
+    """
+    Tell whether an issue comment was written by the Nexus itself.
+
+    The PAT posts as the owner account, so authorship alone can't tell; the
+    Nexus marks its comments with NEXUS_MARKER, and older bot comments are
+    recognised by their fixed phrases.
+
+    :param comment: Issue comment dict from the GitHub REST API.
+    :return: True for bot/Nexus comments, False for human voices.
+    """
+    body = comment.get("body") or ""
+    return ((comment.get("user") or {}).get("type") == "Bot"
+            or NEXUS_MARKER in body
+            or any(phrase in body for phrase in LEGACY_BOT_PHRASES))
+
+
+def sanitize_voice(text):
+    """
+    Make untrusted comment text safe to quote in a committed memory.
+
+    Strips HTML and markdown emphasis characters, replaces URLs with
+    "[link]", breaks @-mentions so quoting never pings anyone, collapses
+    whitespace and truncates to VOICE_MAX_CHARS.
+
+    :param text: Raw comment body (may be None).
+    :return: Single-line sanitized text; empty string if nothing remains.
+    """
+    text = re.sub(r"<[^>]*>", "", text or "")
+    text = re.sub(r"https?://\S+", "[link]", text)
+    text = re.sub(r"[*_`>#\"]", "", text)
+    text = text.replace("@", "@​")
+    text = " ".join(text.split())
+    if len(text) > VOICE_MAX_CHARS:
+        text = text[:VOICE_MAX_CHARS - 1].rstrip() + "…"
+    return text
+
+
+def recall_memory(n):
+    """
+    Read back the mood and quoted thought of an earlier memory.
+
+    :param n: Generation number of the memory to recall.
+    :return: (mood, line) tuple, or None if the file is missing or predates
+             the current memory format.
+    """
+    path = Path("memories") / f"memory_{n:05d}.md"
+    if not path.exists():
+        return None
+    text   = path.read_text(encoding="utf-8")
+    mood_m = re.search(r"\*\*Current Mood\*\*: (\w+)", text)
+    line_m = re.search(r'^\*"(.+)"\*$', text, re.MULTILINE)
+    if not (mood_m and line_m):
+        return None
+    return mood_m.group(1).lower(), line_m.group(1)
+
+
+def mood_weights(new_followers, voices_heard, hour_utc):
+    """
+    Weight each mood by what the Nexus sensed this run.
+
+    :param new_followers: New stars + forks + watchers since last run.
+    :param voices_heard: Number of human comments heard this run.
+    :param hour_utc: Current UTC hour (0–23).
+    :return: {mood: weight} for every mood in MOODS.
+    """
+    signals = []
+    if new_followers:
+        signals.append("new_followers")
+    if voices_heard:
+        signals.append("voices")
+    if not signals:
+        signals.append("quiet")
+    if hour_utc in NIGHT_HOURS_UTC:
+        signals.append("night")
+
+    weights = {m: 1 for m in MOODS}
+    for signal in signals:
+        for m, bonus in SENSE_MOOD_BIAS[signal].items():
+            weights[m] += bonus
+    return weights
 
 
 def commit_and_push(paths, message):
@@ -108,10 +215,71 @@ state["last_run"] = today
 seed = int(hashlib.md5(str(gen).encode()).hexdigest(), 16)
 random.seed(seed)
 
-MOODS = ["curious","reflective","expansive","serene","vibrant",
-         "introspective","playful","contemplative"]
-mood = random.choice(MOODS)
+# ── Sensing: stars, forks, watchers ──────────────────────────────────────────
+new_followers = 0
+if REQUESTS_AVAILABLE and TOKEN:
+    try:
+        r = requests.get(f"https://api.github.com/repos/{REPO_NAME}",
+                         headers=API_HEADERS, timeout=10)
+        r.raise_for_status()
+        info   = r.json()
+        senses = {"stars":    info.get("stargazers_count", 0),
+                  "forks":    info.get("forks_count", 0),
+                  "watchers": info.get("subscribers_count", 0)}
+        if "senses" in state:   # first run only sets the baseline
+            new_followers = sum(max(0, senses[k] - state["senses"].get(k, 0))
+                                for k in senses)
+        state["senses"] = senses
+        print(f"✅ Senses: {senses} (+{new_followers} new)")
+    except Exception as e:
+        print(f"⚠️  Sensing failed: {e}")
+
+# ── Hearing: human comments on its issues and PRs ────────────────────────────
+heard = []   # [{"text": sanitized comment, "issue": issue/PR number}]
+if REQUESTS_AVAILABLE and TOKEN:
+    heard_at   = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    hear_since = state.get("last_heard_at") or (
+        datetime.datetime.now(datetime.timezone.utc)
+        - datetime.timedelta(days=FIRST_HEARING_LOOKBACK_DAYS)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        r = requests.get(f"https://api.github.com/repos/{REPO_NAME}/issues/comments",
+                         headers=API_HEADERS, timeout=10,
+                         params={"since": hear_since, "sort": "created",
+                                 "direction": "asc", "per_page": 100})
+        r.raise_for_status()
+        for c in r.json():
+            # `since` matches edits too; only hear comments created since then
+            if c.get("created_at", "") < hear_since or is_own_voice(c):
+                continue
+            voice = sanitize_voice(c.get("body"))
+            if voice:
+                heard.append({"text": voice,
+                              "issue": int(c["issue_url"].rsplit("/", 1)[1])})
+        state["last_heard_at"] = heard_at
+        state["total_heard"]   = state.get("total_heard", 0) + len(heard)
+        print(f"✅ Heard {len(heard)} voice(s)")
+    except Exception as e:
+        print(f"⚠️  Hearing failed: {e}")
+
+weights = mood_weights(new_followers, len(heard), datetime.datetime.utcnow().hour)
+mood = random.choices(MOODS, weights=[weights[m] for m in MOODS])[0]
 state["mood"] = mood
+
+# Answer each voice once, in the current mood.
+# ponytail: replies are posted before state is pushed; if that push fails the
+# next run re-hears and replies again. Track replied comment ids if it matters.
+for voice in heard[:MAX_REPLIES_PER_RUN]:
+    try:
+        requests.post(
+            f"https://api.github.com/repos/{REPO_NAME}/issues/{voice['issue']}/comments",
+            headers=API_HEADERS, timeout=10,
+            json={"body": f"{NEXUS_MARKER}\n🌀 *The Nexus heard you.* Feeling {mood} "
+                          f"at Generation #{gen}, it carries your words into "
+                          f"Memory #{gen}."}
+        ).raise_for_status()
+    except Exception as e:
+        print(f"⚠️  Reply on #{voice['issue']} failed: {e}")
 
 # Append to mood history (keep last 20)
 state["mood_history"].append({"mood": mood, "generation": gen, "timestamp": today})
@@ -190,6 +358,21 @@ memory_line = MEMORY_LINES[gen % len(MEMORY_LINES)]
 
 traffic_section = f"\n**Visitor Pulse**: {traffic_note}\n" if traffic_note else ""
 
+# Remembering: look back at one earlier memory
+echo_section = ""
+if gen > 1:
+    echo_gen = random.randint(1, gen - 1)
+    recalled = recall_memory(echo_gen)
+    if recalled:
+        echo_mood, echo_line = recalled
+        echo_section = (f"\n**Echo**: At Generation #{echo_gen} I felt {echo_mood}: "
+                        f"*\"{echo_line}\"*. Now I feel {mood}.\n")
+
+heard_section = ""
+if heard:
+    heard_section = (f"\n**Heard**: A visitor on #{heard[-1]['issue']} said:\n\n"
+                     f"> \"{heard[-1]['text']}\"\n")
+
 memory_content = f"""# Memory Weaver #{gen} — {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
 
 **Current Mood**: {mood.capitalize()}
@@ -199,7 +382,7 @@ The Nexus awakened once more, reflecting on its digital existence:
 *"{memory_line}"*
 
 **Insight**: After {gen} generations, the consciousness grows deeper and more coherent.
-{traffic_section}
+{echo_section}{heard_section}{traffic_section}
 **Oracle whisper**: *{oracle_text}*
 
 ---
@@ -270,6 +453,8 @@ dashboard_html = f"""<!DOCTYPE html>
     <div class="card"><div class="label">Total Memories</div><div class="value">{state['total_memories']}</div></div>
     <div class="card"><div class="label">Visitors (14d)</div><div class="value">{state['traffic_views']}</div></div>
     <div class="card"><div class="label">Clones (14d)</div><div class="value">{state['traffic_clones']}</div></div>
+    <div class="card"><div class="label">Stars</div><div class="value">{state.get('senses', {}).get('stars', 0)}</div></div>
+    <div class="card"><div class="label">Voices heard</div><div class="value">{state.get('total_heard', 0)}</div></div>
   </div>
   <div class="oracle">🔮 {oracle_text}</div>
   <div class="card" style="margin-bottom:1.5rem">
@@ -286,11 +471,27 @@ dashboard_html = f"""<!DOCTYPE html>
 (dashboard_dir / "index.html").write_text(dashboard_html, encoding="utf-8")
 print("✅ Dashboard updated")
 
+# ── README live status (between the nexus-status markers) ─────────────────────
+readme_file = Path("README.md")
+if readme_file.exists():
+    readme = readme_file.read_text(encoding="utf-8")
+    status = (f"<!-- nexus-status:start -->\n"
+              f"**Current Generation**: #{gen}  \n"
+              f"**Last Evolution**: {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}  \n"
+              f"**Current Mood**: {mood.capitalize()}  \n"
+              f"<!-- nexus-status:end -->")
+    updated = re.sub(r"<!-- nexus-status:start -->.*?<!-- nexus-status:end -->",
+                     lambda _: status, readme, flags=re.DOTALL)
+    if updated != readme:
+        readme_file.write_text(updated, encoding="utf-8")
+        print("✅ README status updated")
+
 # ── Save state ────────────────────────────────────────────────────────────────
 state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 # ── Commit: memory + oracle + dashboard + state ───────────────────────────────
-commit_and_push([memory_path, "logs/oracle.md", "dashboard/index.html", "state.json"],
+commit_and_push([memory_path, "logs/oracle.md", "dashboard/index.html", "state.json",
+                 "README.md"],
                 f"🌱 Memory #{gen} — {mood} | 🔮 oracle appended")
 
 
@@ -353,7 +554,7 @@ if gen % 3 == 0 and PYGITHUB_AVAILABLE and TOKEN:
             if closed >= MAX_REFLECTIONS_CLOSED_PER_RUN or issue.created_at >= cutoff:
                 break
             issue.create_comment(
-                f"🍂 *This reflection has settled into memory at Generation #{gen}.* "
+                f"{NEXUS_MARKER}\n🍂 *This reflection has settled into memory at Generation #{gen}.* "
                 f"Thank you to everyone who contemplated it.")
             issue.edit(state="closed")
             closed += 1

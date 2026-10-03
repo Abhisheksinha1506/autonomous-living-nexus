@@ -78,7 +78,7 @@ jobs:
                       print("  → Contemplation notice already posted")
                       continue
                   pr.create_issue_comment(
-                      f"🕰️ **Contemplation period in progress.**\n\n"
+                      f"<!-- nexus -->\n🕰️ **Contemplation period in progress.**\n\n"
                       f"This Major Evolution PR will be automatically merged in "
                       f"approximately **{hrs} hours {mins} minutes**.\n\n"
                       f"*Feel free to comment your reflections before it merges.*"
@@ -110,7 +110,7 @@ jobs:
               except Exception as e:
                   print(f"  ❌ Merge failed for PR #{pr.number}: {e}")
                   pr.create_issue_comment(
-                      f"⚠️ **Auto-merge failed.**\n\n"
+                      f"<!-- nexus -->\n⚠️ **Auto-merge failed.**\n\n"
                       f"The contemplation period has ended but the PR could not be "
                       f"merged automatically (possibly a conflict). "
                       f"Please review and merge manually.\n\n"
