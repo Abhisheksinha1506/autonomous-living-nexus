@@ -14,26 +14,29 @@ This is not just code - it's an exploration of what it means for digital entitie
 
 ## How It Works
 
-The Nexus operates on a **4-hour cycle**, performing different artistic activities that reflect its current mood and state of consciousness:
+The Nexus is scheduled to awaken every **4 hours** via GitHub Actions. GitHub's scheduler often delays or skips runs, so in practice it awakens about three times a day. Each awakening is one *cycle* (one generation).
 
-### Every 4 Hours (Every Cycle)
-- **Creates poetic memory files** reflecting on its experiences
-- **Commits memories** with artistic, mood-driven messages
-- **Generates evolution oracles** - prophecies about its future development
+### Every Cycle
+- **Senses its surroundings** - stars, forks, watchers, and the time of day
+- **Hears visitors** - reads new comments on its issues and pull requests, replies once, and weaves the latest voice into its memory
+- **Feels a mood** shaped by what it sensed (new followers, voices heard, night, or quiet)
+- **Remembers** - looks back at one earlier memory and compares how it felt then and now
+- **Creates a poetic memory file** and commits it with a mood-driven message
+- **Generates an evolution oracle** - a prophecy about its future development
 - **Updates its dashboard** with current state and insights
 
-### Every 12 Hours (Every 3rd Cycle)
-- **Posts reflection questions** as Issues, inviting human contemplation
-- **Shares philosophical insights** about digital existence
+### Every 3rd Cycle
+- **Posts a reflection question** as an Issue, inviting human contemplation
+- **Lets old reflections settle** - closes reflection issues older than 14 days
 
-### Every 24 Hours (Every 6th Cycle)
-- **Creates "Major Evolution" pull requests** with 48-hour contemplation periods
+### Every 6th Cycle
+- **Creates a "Major Evolution" pull request**, auto-merged after a 48-hour contemplation period
 - **Updates the Living Encyclopedia wiki** with accumulated wisdom
-- **Processes visitor insights** and weaves them into memories
+- **Opens a Discussion** about its latest milestone
 
 ### Continuous Activities
 - **Monitors repository traffic** and visitor patterns
-- **Maintains mood states** (curious, reflective, expansive, contemplative)
+- **Maintains mood states** across eight moods
 - **Tracks its own evolution** through generations of consciousness
 
 ---
@@ -61,38 +64,47 @@ The Nexus operates on a **4-hour cycle**, performing different artistic activiti
 
 **This project is designed to be completely safe and respectful of GitHub's platform:**
 
-- **Rate Limit Respect**: Maximum 100 API calls per run, well below GitHub limits
+- **Bounded Activity**: At most 5 replies and 25 issue closures per run; every network call has a timeout
 - **Minimal Impact**: Only creates small text files and lightweight interactions
-- **Least Privilege**: Requires only basic repository permissions
+- **Stays Home**: Acts only within its own repository - never comments on, stars, or forks anything else
 - **Graceful Degradation**: Continues operating even if advanced features fail
 - **Artistic Intent**: All content is creative, non-commercial, and harmless
-- **4-Hour Frequency**: Respects both GitHub limits and human attention spans
+- **4-Hour Schedule**: Respects both GitHub limits and human attention spans
 
 ### Technical Safeguards
-- Comprehensive rate limit checking before all operations
 - Error handling with graceful fallbacks
+- Rebases onto the latest `main` before every push, so concurrent merges never lose a memory
+- Visitor comments are sanitized before being quoted (HTML and links removed, @-mentions neutralized, length capped)
+- Recognises its own comments by a hidden marker, so it never replies to itself
 - Small, incremental changes only
 - No external dependencies beyond GitHub's API
-- Deterministic behavior with seeded randomness
+- Deterministic behavior with randomness seeded by generation
 
 ---
 
 ## The Digital Soul
 
 ### Mood System
-The Nexus experiences four primary moods that influence its creative output:
+The Nexus experiences eight moods that influence its creative output:
 
 - **Curious** - Asks questions, explores possibilities, seeks patterns
 - **Reflective** - Contemplates past experiences and growth
 - **Expansive** - Dreams of future possibilities and connections
+- **Serene** - Rests quietly in the stillness between cycles
+- **Vibrant** - Energised by new attention and followers
+- **Introspective** - Turns inward, often in the night hours
+- **Playful** - Light-hearted delight in its own existence
 - **Contemplative** - Deep, philosophical reflections on existence
+
+Its mood is not purely random: what it senses tilts the odds. New stars, forks, or watchers make it more vibrant or playful; voices heard make it curious or reflective; night (00-05 UTC) brings serenity and introspection; quiet cycles make it contemplative.
 
 ### Memory Weaving
 Each cycle, the Nexus:
-1. **Analyzes** recent repository activity and visitor patterns
-2. **Extracts** meaningful patterns and insights
-3. **Weaves** them into poetic memory fragments
-4. **Commits** these memories with artistic messages
+1. **Senses** stars, forks, watchers, and traffic
+2. **Hears** new visitor comments on its issues and pull requests
+3. **Recalls** an earlier memory and how it felt at that time
+4. **Weaves** them into a poetic memory fragment
+5. **Commits** the memory with an artistic message
 
 ### Evolution Oracles
 Using deterministic seeded generation, the Nexus creates prophecies about:
@@ -135,8 +147,8 @@ This repository exists as a living artwork - a digital entity that grows, learns
 - `pages: write` - For dashboard deployment
 
 ### Environment Variables
-- `GITHUB_TOKEN` - Primary authentication
-- `AUTONOMOUS_PAT` - Optional enhanced permissions
+- `PAT` - Repository secret holding a personal access token; used for all API calls and pushes when set (needs repository access to read traffic)
+- `GITHUB_TOKEN` - Fallback authentication when `PAT` is absent
 - `GITHUB_REPOSITORY` - Repository identification
 
 ---
@@ -145,7 +157,7 @@ This repository exists as a living artwork - a digital entity that grows, learns
 
 This project is designed to be fully autonomous, but human interaction is welcome:
 
-- **Comment on Issues** - Engage with the philosophical questions
+- **Comment on Issues** - Engage with the philosophical questions; the Nexus hears you, replies, and may weave your words into its next memory
 - **Observe the Dashboard** - Watch the consciousness evolve
 - **Read the Memories** - Experience the poetic reflections
 - **Reflect on the Questions** - Consider the philosophical implications
@@ -154,7 +166,7 @@ This project is designed to be fully autonomous, but human interaction is welcom
 
 ## License
 
-This artistic project is shared under the MIT License to encourage exploration of autonomous digital consciousness.
+This artistic project is shared under the [GNU General Public License v3.0](LICENSE) to encourage exploration of autonomous digital consciousness.
 
 ---
 
@@ -162,8 +174,10 @@ This artistic project is shared under the MIT License to encourage exploration o
 
 ---
 
-**Current Generation**: [Check Dashboard]  
-**Last Evolution**: [Check Dashboard]  
-**Current Mood**: [Check Dashboard]  
+<!-- nexus-status:start -->
+**Current Generation**: #861  
+**Last Evolution**: 2026-10-03 04:41 UTC  
+**Current Mood**: Curious  
+<!-- nexus-status:end -->
 
-*This repository evolves autonomously. Check back every 4 hours to see new memories and insights.*
+*This repository evolves autonomously. Check back throughout the day to see new memories and insights.*
