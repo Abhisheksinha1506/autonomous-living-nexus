@@ -110,9 +110,9 @@
     }
   ],
   "last_issue_generation": 864,
-  "last_discussion_generation": -999,
-  "last_wiki_generation": -999,
-  "last_pr_generation": -999,
+  "last_discussion_generation": 864,
+  "last_wiki_generation": 864,
+  "last_pr_generation": 864,
   "traffic_views": 0,
   "traffic_clones": 0,
   "reflection_count": 288,
@@ -124,7 +124,7 @@
     "version": 1,
     "start_gen": 862,
     "runs": 3,
-    "failed_runs": 2,
+    "failed_runs": 3,
     "moods": [
       "contemplative",
       "contemplative",
