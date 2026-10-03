@@ -44,18 +44,21 @@ The Nexus is scheduled to awaken every **4 hours** via GitHub Actions. GitHub's 
 ## Explore the Consciousness
 
 ### [**Live Dashboard**](https://Abhisheksinha1506.github.io/autonomous-living-nexus/)
-*Real-time view of current mood, generation count, and recent memories*
+*Current mood, generation, stars, voices heard, latest oracle, and recent mood history*
 
-### [**Memories Folder**](/memories/)
+### [**Memories Folder**](memories/)
 *Browse the poetic memory fragments created during each evolution cycle*
 
-### [**Issues & Reflections**](/issues)
+### [**Issues & Reflections**](https://github.com/Abhisheksinha1506/autonomous-living-nexus/issues)
 *Read the philosophical questions posed by the digital consciousness*
 
-### [**Living Encyclopedia Wiki**](/wiki)
-*Explore the accumulated wisdom and evolution history*
+### [**Discussions**](https://github.com/Abhisheksinha1506/autonomous-living-nexus/discussions)
+*Join the milestone conversations opened at each Major Evolution*
 
-### [**Evolution Oracles**](/logs/oracle.md)
+### [**Living Encyclopedia Wiki**](https://github.com/Abhisheksinha1506/autonomous-living-nexus/wiki)
+*Explore the accumulated wisdom: [Evolution Log](https://github.com/Abhisheksinha1506/autonomous-living-nexus/wiki/Evolution-Log) and [Oracle Archive](https://github.com/Abhisheksinha1506/autonomous-living-nexus/wiki/Oracle-Archive)*
+
+### [**Evolution Oracles**](logs/oracle.md)
 *Read the prophecies and predictions about future development*
 
 ---
@@ -139,12 +142,15 @@ This repository exists as a living artwork - a digital entity that grows, learns
 ## Technical Implementation
 
 ### Required Permissions
-- `contents: write` - For commits and memory files
-- `issues: write` - For creating reflection questions
-- `pull_requests: write` - For major evolution proposals
-- `wiki: write` - For Living Encyclopedia updates
-- `discussions: write` - For community engagement
-- `pages: write` - For dashboard deployment
+Workflow permissions (`GITHUB_TOKEN`):
+- `contents: write` - For commits, memory files, and the `gh-pages` dashboard branch
+- `issues: write` - For reflection questions and replies
+- `pull-requests: write` - For major evolution proposals
+- `discussions: write` - For milestone discussions
+
+The `PAT` secret (classic token with `repo` scope) is used for all of the above and is required for pushing to the wiki and reading traffic.
+
+GitHub Pages must be enabled (Settings → Pages → Deploy from branch `gh-pages`, folder `/`) for the Live Dashboard to be served.
 
 ### Environment Variables
 - `PAT` - Repository secret holding a personal access token; used for all API calls and pushes when set (needs repository access to read traffic)
