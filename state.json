@@ -109,16 +109,16 @@
       "timestamp": "2026-10-03T22:46:19.480336"
     }
   ],
-  "last_issue_generation": -999,
+  "last_issue_generation": 864,
   "last_discussion_generation": -999,
   "last_wiki_generation": -999,
   "last_pr_generation": -999,
   "traffic_views": 0,
   "traffic_clones": 0,
-  "reflection_count": 287,
-  "evolution_count": 143,
-  "next_genome_version": 2,
-  "genomes_survived": 0,
+  "reflection_count": 288,
+  "evolution_count": 144,
+  "next_genome_version": 3,
+  "genomes_survived": 1,
   "genomes_died": 0,
   "trial": {
     "version": 1,
@@ -142,5 +142,6 @@
     "watchers": 0
   },
   "last_heard_at": "2026-10-03T22:46:19Z",
-  "total_heard": 0
+  "total_heard": 0,
+  "best_fitness": 0.522
 }

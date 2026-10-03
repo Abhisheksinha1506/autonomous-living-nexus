@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "fitness": null,
+  "fitness": 0.522,
   "parent": null,
   "genes": {
     "mood_base": {
