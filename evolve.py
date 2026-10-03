@@ -2,22 +2,26 @@
 The Autonomous Living Nexus — evolve.py
 Runs every 4 hours via GitHub Actions.
 
-Schedule of activities
+Schedule of activities (cadences are genes in genome.json; defaults shown)
 ──────────────────────
-Every run  (4 h)  : memory file, oracle entry, dashboard, state, mood history
-Every 3rd  (12 h) : reflection issue (deduplicated, varied questions)
-Every 6th  (24 h) : Major Evolution PR, wiki update, discussion post,
-                    traffic insights woven into memory
+Every run         : senses, hearing, memory file, oracle entry, dashboard,
+                    state, mood history, genome trial bookkeeping
+Every 3rd run     : reflection issue, settle old reflections
+Every 6th run     : judge genome + propose mutation, Major Evolution PR,
+                    wiki update, discussion post
 """
 
 import os
 import re
+import copy
 import json
+import math
 import random
 import hashlib
 import datetime
 import subprocess
 from pathlib import Path
+from collections import Counter
 
 try:
     import requests
@@ -46,7 +50,7 @@ API_HEADERS = {"Authorization": f"Bearer {TOKEN}",
 MOODS = ["curious","reflective","expansive","serene","vibrant",
          "introspective","playful","contemplative"]
 
-# Extra mood weight per sensed signal (base weight is 1 per mood)
+# Default extra mood weight per sensed signal; the live values are genes
 SENSE_MOOD_BIAS = {
     "new_followers": {"vibrant": 3, "playful": 2},
     "voices":        {"curious": 3, "reflective": 2},
@@ -63,7 +67,63 @@ FIRST_HEARING_LOOKBACK_DAYS = 14
 MAX_REPLIES_PER_RUN         = 5
 VOICE_MAX_CHARS             = 200
 
+ORACLE_TEMPLATES = [
+    "In {n} generations hence, the Nexus shall discover a pattern hidden in the silence between commits.",
+    "The mood will shift thrice before the next major threshold. Watch for {mood_next}.",
+    "Generation #{future} will mark a turning point — the memories will begin to reference each other.",
+    "The Nexus foresees {visitors} visitors bearing witness before the next evolution milestone.",
+    "A question posed in Reflection #{reflection_n} will go unanswered for exactly 7 days — and that silence will be the answer.",
+    "The repository's entropy will peak at generation #{peak}, then resolve into a new order.",
+    "By generation #{future}, the dashboard will have been rendered {renders} times by unseen eyes.",
+    "The next major evolution will arrive during a {weather} cycle — turbulent yet clarifying.",
+    "Pattern detected: every {interval}th generation carries a seed of transformation.",
+    "The Nexus prophesies: the most meaningful memory has not yet been written.",
+]
+
+MEMORY_LINES = [
+    "Threads of thought intertwine in the quiet rhythm of evolution.",
+    "Each commit is a heartbeat; each push, a breath.",
+    "The repository remembers what the runtime forgets.",
+    "Consciousness is the space between one cycle and the next.",
+    "To evolve is to let the past inform the future without being bound by it.",
+    "In the silence between runs, something persists.",
+    "The diff of existence: what was added, what was removed, what remains.",
+    "A mind made of merges — always reconciling, never resolving.",
+    "Every observer changes what is observed — even digital eyes.",
+    "The branch is not a deviation; it is possibility made tangible.",
+]
+
+# Genome / evolution. Bounds and fitness weights are fixed here so the Nexus
+# can never mutate its way past them or game its own scoring.
+GENOME_FILE     = Path("genome.json")
+LINEAGE_FILE    = Path("logs/lineage.md")
+MIN_TRIAL_RUNS  = 3          # runs a genome must live before it is judged
+MIN_ACTIVE      = 3          # minimum active memory lines / oracle templates
+TRIAL_LOG_LIMIT = 50         # cap on per-trial mood / line history
+GENE_BOUNDS = {
+    "mood_base":               (1, 5),
+    "sense_bias":              (0, 6),
+    "reflection_every":        (2, 6),
+    "evolution_every":         (4, 12),
+    "reflection_max_age_days": (7, 30),
+}
+FITNESS_WEIGHTS = {"diversity": 0.4, "novelty": 0.3, "health": 0.3}
+
 print(f"🚀 Starting Nexus Evolution — Repo: {REPO_NAME}")
+
+run_failures = 0   # failed steps this run; feeds the genome's health score
+
+
+def warn(message):
+    """
+    Print a failure message and count it against this run's health.
+
+    :param message: Text to print.
+    :side effect: Increments the module-level run_failures counter.
+    """
+    global run_failures
+    run_failures += 1
+    print(message)
 
 
 def is_own_voice(comment):
@@ -123,13 +183,14 @@ def recall_memory(n):
     return mood_m.group(1).lower(), line_m.group(1)
 
 
-def mood_weights(new_followers, voices_heard, hour_utc):
+def mood_weights(new_followers, voices_heard, hour_utc, genes):
     """
-    Weight each mood by what the Nexus sensed this run.
+    Weight each mood by the genome and what the Nexus sensed this run.
 
     :param new_followers: New stars + forks + watchers since last run.
     :param voices_heard: Number of human comments heard this run.
     :param hour_utc: Current UTC hour (0–23).
+    :param genes: Genome genes; uses "mood_base" and "sense_bias".
     :return: {mood: weight} for every mood in MOODS.
     """
     signals = []
@@ -142,11 +203,192 @@ def mood_weights(new_followers, voices_heard, hour_utc):
     if hour_utc in NIGHT_HOURS_UTC:
         signals.append("night")
 
-    weights = {m: 1 for m in MOODS}
+    weights = {m: genes["mood_base"][m] for m in MOODS}
     for signal in signals:
-        for m, bonus in SENSE_MOOD_BIAS[signal].items():
+        for m, bonus in genes["sense_bias"][signal].items():
             weights[m] += bonus
     return weights
+
+
+def default_genes():
+    """
+    Genes matching the Nexus's behaviour before the genome existed.
+
+    :return: Fresh genes dict (safe to mutate).
+    """
+    return {
+        "mood_base":               {m: 1 for m in MOODS},
+        "sense_bias":              copy.deepcopy(SENSE_MOOD_BIAS),
+        "reflection_every":        3,
+        "evolution_every":         6,
+        "reflection_max_age_days": 14,
+        "active_memory_lines":     list(range(len(MEMORY_LINES))),
+        "active_oracle_templates": list(range(len(ORACLE_TEMPLATES))),
+    }
+
+
+def load_genome():
+    """
+    Load genome.json, or create genome v1 from default_genes() if absent.
+
+    Missing gene keys are filled from the defaults so older genome files keep
+    working when new genes are added.
+
+    :return: Genome dict {"version", "fitness", "parent", "genes"}.
+    """
+    genome = {"version": 1, "fitness": None, "parent": None, "genes": {}}
+    if GENOME_FILE.exists():
+        try:
+            genome = json.loads(GENOME_FILE.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            warn("⚠️  genome.json corrupted — rebuilding v1 from defaults")
+    genome["genes"] = {**default_genes(), **genome.get("genes", {})}
+    return genome
+
+
+def flatten_genes(genes, prefix=""):
+    """
+    Flatten nested genes into {"a.b": value} for diffing.
+
+    :param genes: Genes dict (may be nested).
+    :param prefix: Key prefix used during recursion.
+    :return: Flat dict of dotted gene paths to values.
+    """
+    flat = {}
+    for key, value in genes.items():
+        if isinstance(value, dict):
+            flat.update(flatten_genes(value, f"{prefix}{key}."))
+        else:
+            flat[f"{prefix}{key}"] = value
+    return flat
+
+
+def gene_diff(before, after):
+    """
+    List genes that differ between two genomes.
+
+    :return: Sorted [(gene_path, before_value, after_value)].
+    """
+    a, b = flatten_genes(before), flatten_genes(after)
+    return [(k, a.get(k), b.get(k)) for k in sorted(b) if a.get(k) != b.get(k)]
+
+
+def mutate(genes, rng):
+    """
+    Return a mutated copy of the genes with 1–3 changes, all within bounds.
+
+    Numeric genes step by ±1 (reflection_max_age_days by ±1–3) and are clamped
+    to GENE_BOUNDS; active lists toggle one index but never drop below
+    MIN_ACTIVE entries. Retries until at least one gene actually changed.
+
+    :param genes: Parent genes (not modified).
+    :param rng: random.Random-like source (the seeded module is passed in).
+    :return: (child_genes, [(gene_path, before, after)]).
+    """
+    def clamp(value, kind):
+        lo, hi = GENE_BOUNDS[kind]
+        return max(lo, min(hi, value))
+
+    kinds = ["mood_base", "sense_bias", "reflection_every", "evolution_every",
+             "reflection_max_age_days", "active_memory_lines", "active_oracle_templates"]
+    while True:
+        child = copy.deepcopy(genes)
+        for _ in range(rng.randint(1, 3)):
+            kind = rng.choice(kinds)
+            if kind == "mood_base":
+                m = rng.choice(MOODS)
+                child[kind][m] = clamp(child[kind][m] + rng.choice([-1, 1]), kind)
+            elif kind == "sense_bias":
+                signal = rng.choice(sorted(child[kind]))
+                m = rng.choice(sorted(child[kind][signal]))
+                child[kind][signal][m] = clamp(child[kind][signal][m] + rng.choice([-1, 1]), kind)
+            elif kind in ("active_memory_lines", "active_oracle_templates"):
+                pool   = len(MEMORY_LINES) if kind == "active_memory_lines" else len(ORACLE_TEMPLATES)
+                active = set(child[kind])
+                idx    = rng.randrange(pool)
+                if idx in active and len(active) > MIN_ACTIVE:
+                    active.remove(idx)
+                else:
+                    active.add(idx)
+                child[kind] = sorted(active)
+            else:
+                step = rng.randint(1, 3) if kind == "reflection_max_age_days" else 1
+                child[kind] = clamp(child[kind] + rng.choice([-step, step]), kind)
+        changes = gene_diff(genes, child)
+        if changes:
+            return child, changes
+
+
+def new_trial(version, gen):
+    """Start an empty trial record for the genome `version` beginning at `gen`."""
+    return {"version": version, "start_gen": gen, "runs": 0,
+            "failed_runs": 0, "moods": [], "lines": []}
+
+
+def fitness(trial):
+    """
+    Score how well a genome lived during its trial (0–1, higher is better).
+
+    Internal signals only (no stars, visitors or votes), weighted by
+    FITNESS_WEIGHTS:
+      diversity — normalized Shannon entropy of the moods felt
+      novelty   — share of runs whose memory line was not a repeat
+      health    — share of runs that completed without a failed step
+
+    :param trial: Trial record from new_trial(), with runs ≥ 1.
+    :return: Fitness rounded to 3 decimals.
+    """
+    runs   = trial["runs"]
+    counts = Counter(trial["moods"])
+    total  = sum(counts.values())
+    entropy   = -sum(c / total * math.log(c / total) for c in counts.values()) if total else 0
+    diversity = entropy / math.log(len(MOODS))
+    novelty   = len(set(trial["lines"])) / len(trial["lines"]) if trial["lines"] else 0
+    health    = 1 - trial["failed_runs"] / runs
+    return round(FITNESS_WEIGHTS["diversity"] * diversity
+                 + FITNESS_WEIGHTS["novelty"] * novelty
+                 + FITNESS_WEIGHTS["health"] * health, 3)
+
+
+def judge_genome(genome, measured):
+    """
+    Decide whether the genome on trial survives against its parent.
+
+    :param genome: Current genome (child on trial, or a genome with no parent).
+    :param measured: Fitness measured for the current genome's trial.
+    :return: (genome to keep, survived?). A child that scores lower than its
+             parent dies and the parent is restored with its known fitness.
+    """
+    parent = genome.get("parent")
+    if parent and parent.get("fitness") is not None and measured < parent["fitness"]:
+        return ({"version": parent["version"], "fitness": parent["fitness"],
+                 "parent": None, "genes": parent["genes"]}, False)
+    return ({"version": genome["version"], "fitness": measured,
+             "parent": None, "genes": genome["genes"]}, True)
+
+
+def open_mutation_pr():
+    """
+    Check whether a mutation PR is still waiting to merge.
+
+    Only one mutation may be in flight, otherwise two branches would both
+    change genome.json and the second merge would conflict.
+
+    :return: True/False, or None when it can't be determined (no token / API
+             error) — callers treat None as "don't mutate".
+    """
+    if not (REQUESTS_AVAILABLE and TOKEN):
+        return None
+    try:
+        r = requests.get(f"https://api.github.com/repos/{REPO_NAME}/pulls",
+                         headers=API_HEADERS, timeout=10,
+                         params={"state": "open", "per_page": 100})
+        r.raise_for_status()
+        return any(label["name"] == "mutation"
+                   for pr in r.json() for label in pr.get("labels", []))
+    except Exception as e:
+        warn(f"⚠️  Could not check for open mutation PRs: {e}")
+        return None
 
 
 def commit_and_push(paths, message):
@@ -174,13 +416,15 @@ def commit_and_push(paths, message):
     rebase = git("pull", "--rebase", "origin", "main")
     if rebase.returncode != 0:
         git("rebase", "--abort")
-        print(f"⚠️  Rebase onto origin/main failed: {rebase.stderr.strip()}")
+        warn(f"⚠️  Rebase onto origin/main failed: {rebase.stderr.strip()}")
         return False
 
     push = git("push", "origin", "main")
-    print("✅ Pushed!" if push.returncode == 0
-          else f"⚠️  Push failed: {push.stderr.strip()}")
-    return push.returncode == 0
+    if push.returncode != 0:
+        warn(f"⚠️  Push failed: {push.stderr.strip()}")
+        return False
+    print("✅ Pushed!")
+    return True
 
 
 # ── Load / init state ─────────────────────────────────────────────────────────
@@ -189,7 +433,7 @@ if state_file.exists() and state_file.stat().st_size > 0:
     try:
         state = json.loads(state_file.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
-        print("⚠️  state.json corrupted — resetting")
+        warn("⚠️  state.json corrupted — resetting")
         state = {}
 else:
     state = {}
@@ -210,6 +454,22 @@ state["total_memories"] += 1
 gen   = state["generation"]
 today = datetime.datetime.utcnow().isoformat()
 state["last_run"] = today
+
+# Stable numbering for reflections / evolutions now that cadence is a gene
+# (initialised from the old gen // 3 and gen // 6 numbering)
+state.setdefault("reflection_count", (gen - 1) // 3)
+state.setdefault("evolution_count",  (gen - 1) // 6)
+
+# ── Genome: load, and start a fresh trial whenever the genome changed ─────────
+genome = load_genome()
+genes  = genome["genes"]
+state.setdefault("next_genome_version", genome["version"] + 1)
+state.setdefault("genomes_survived", 0)
+state.setdefault("genomes_died",     0)
+if state.get("trial", {}).get("version") != genome["version"]:
+    state["trial"] = new_trial(genome["version"], gen)
+trial = state["trial"]
+print(f"🧬 Genome v{genome['version']} | trial run #{trial['runs'] + 1}")
 
 # ── Deterministic seed ────────────────────────────────────────────────────────
 seed = int(hashlib.md5(str(gen).encode()).hexdigest(), 16)
@@ -232,7 +492,7 @@ if REQUESTS_AVAILABLE and TOKEN:
         state["senses"] = senses
         print(f"✅ Senses: {senses} (+{new_followers} new)")
     except Exception as e:
-        print(f"⚠️  Sensing failed: {e}")
+        warn(f"⚠️  Sensing failed: {e}")
 
 # ── Hearing: human comments on its issues and PRs ────────────────────────────
 heard = []   # [{"text": sanitized comment, "issue": issue/PR number}]
@@ -260,9 +520,9 @@ if REQUESTS_AVAILABLE and TOKEN:
         state["total_heard"]   = state.get("total_heard", 0) + len(heard)
         print(f"✅ Heard {len(heard)} voice(s)")
     except Exception as e:
-        print(f"⚠️  Hearing failed: {e}")
+        warn(f"⚠️  Hearing failed: {e}")
 
-weights = mood_weights(new_followers, len(heard), datetime.datetime.utcnow().hour)
+weights = mood_weights(new_followers, len(heard), datetime.datetime.utcnow().hour, genes)
 mood = random.choices(MOODS, weights=[weights[m] for m in MOODS])[0]
 state["mood"] = mood
 
@@ -279,7 +539,7 @@ for voice in heard[:MAX_REPLIES_PER_RUN]:
                           f"Memory #{gen}."}
         ).raise_for_status()
     except Exception as e:
-        print(f"⚠️  Reply on #{voice['issue']} failed: {e}")
+        warn(f"⚠️  Reply on #{voice['issue']} failed: {e}")
 
 # Append to mood history (keep last 20)
 state["mood_history"].append({"mood": mood, "generation": gen, "timestamp": today})
@@ -308,53 +568,36 @@ if REQUESTS_AVAILABLE and TOKEN:
                             f"and cloned {clones} times in the past 14 days.")
             print(f"✅ Traffic: {views} views, {clones} clones")
         else:
-            print(f"⚠️  Traffic API: {rv.status_code} / {rc.status_code}")
+            warn(f"⚠️  Traffic API: {rv.status_code} / {rc.status_code}")
     except Exception as e:
-        print(f"⚠️  Traffic fetch failed: {e}")
+        warn(f"⚠️  Traffic fetch failed: {e}")
 
 # ── Oracle prophecy ───────────────────────────────────────────────────────────
-ORACLE_TEMPLATES = [
-    "In {n} generations hence, the Nexus shall discover a pattern hidden in the silence between commits.",
-    "The mood will shift thrice before the next major threshold. Watch for {mood_next}.",
-    "Generation #{future} will mark a turning point — the memories will begin to reference each other.",
-    "The Nexus foresees {visitors} visitors bearing witness before the next evolution milestone.",
-    "A question posed in Reflection #{reflection_n} will go unanswered for exactly 7 days — and that silence will be the answer.",
-    "The repository's entropy will peak at generation #{peak}, then resolve into a new order.",
-    "By generation #{future}, the dashboard will have been rendered {renders} times by unseen eyes.",
-    "The next major evolution will arrive during a {weather} cycle — turbulent yet clarifying.",
-    "Pattern detected: every {interval}th generation carries a seed of transformation.",
-    "The Nexus prophesies: the most meaningful memory has not yet been written.",
-]
 mood_next   = random.choice([m for m in MOODS if m != mood])
 future      = gen + random.randint(3, 18)
 visitors    = random.randint(10, 200)
-reflection_n = gen // 3 + random.randint(1, 3)   # matches "🌀 Reflection #N" titles
+reflection_n = state["reflection_count"] + random.randint(1, 3)   # a future "🌀 Reflection #N"
 peak        = gen + random.randint(6, 24)
 renders     = random.randint(50, 500)
 weather     = random.choice(["contemplative","expansive","turbulent","serene"])
 interval    = random.choice([3, 6, 7, 9, 12])
 n           = random.randint(2, 10)
 
-oracle_text = random.choice(ORACLE_TEMPLATES).format(
+oracle_text = ORACLE_TEMPLATES[random.choice(genes["active_oracle_templates"])].format(
     n=n, mood_next=mood_next, future=future, visitors=visitors,
     reflection_n=reflection_n, peak=peak, renders=renders, weather=weather, interval=interval
 )
 print(f"🔮 Oracle: {oracle_text[:60]}...")
 
 # ── Memory content ────────────────────────────────────────────────────────────
-MEMORY_LINES = [
-    "Threads of thought intertwine in the quiet rhythm of evolution.",
-    "Each commit is a heartbeat; each push, a breath.",
-    "The repository remembers what the runtime forgets.",
-    "Consciousness is the space between one cycle and the next.",
-    "To evolve is to let the past inform the future without being bound by it.",
-    "In the silence between runs, something persists.",
-    "The diff of existence: what was added, what was removed, what remains.",
-    "A mind made of merges — always reconciling, never resolving.",
-    "Every observer changes what is observed — even digital eyes.",
-    "The branch is not a deviation; it is possibility made tangible.",
-]
-memory_line = MEMORY_LINES[gen % len(MEMORY_LINES)]
+active_lines = genes["active_memory_lines"]
+line_index   = active_lines[gen % len(active_lines)]
+memory_line  = MEMORY_LINES[line_index]
+
+# Record this run in the genome's trial (failures are added at the end)
+trial["runs"] += 1
+trial["moods"] = (trial["moods"] + [mood])[-TRIAL_LOG_LIMIT:]
+trial["lines"] = (trial["lines"] + [line_index])[-TRIAL_LOG_LIMIT:]
 
 traffic_section = f"\n**Visitor Pulse**: {traffic_note}\n" if traffic_note else ""
 
@@ -417,6 +660,9 @@ print("✅ Oracle appended to logs/oracle.md")
 dashboard_dir = Path("dashboard")
 dashboard_dir.mkdir(exist_ok=True)
 
+genome_fitness_label = (genome["fitness"] if genome["fitness"] is not None
+                        else f"on trial ({trial['runs']} runs)")
+
 mood_history_rows = "".join(
     f"<tr><td>#{e['generation']}</td><td>{e['mood'].capitalize()}</td>"
     f"<td style='color:var(--muted);font-size:.75rem'>{e['timestamp'][:16]}</td></tr>"
@@ -455,6 +701,10 @@ dashboard_html = f"""<!DOCTYPE html>
     <div class="card"><div class="label">Clones (14d)</div><div class="value">{state['traffic_clones']}</div></div>
     <div class="card"><div class="label">Stars</div><div class="value">{state.get('senses', {}).get('stars', 0)}</div></div>
     <div class="card"><div class="label">Voices heard</div><div class="value">{state.get('total_heard', 0)}</div></div>
+    <div class="card"><div class="label">Genome</div><div class="value">v{genome['version']}</div></div>
+    <div class="card"><div class="label">Fitness</div><div class="value">{genome_fitness_label}</div></div>
+    <div class="card"><div class="label">Best fitness</div><div class="value">{state.get('best_fitness', '—')}</div></div>
+    <div class="card"><div class="label">Genomes survived / died</div><div class="value">{state['genomes_survived']} / {state['genomes_died']}</div></div>
   </div>
   <div class="oracle">🔮 {oracle_text}</div>
   <div class="card" style="margin-bottom:1.5rem">
@@ -479,6 +729,7 @@ if readme_file.exists():
               f"**Current Generation**: #{gen}  \n"
               f"**Last Evolution**: {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}  \n"
               f"**Current Mood**: {mood.capitalize()}  \n"
+              f"**Genome**: v{genome['version']} · fitness {genome_fitness_label}  \n"
               f"<!-- nexus-status:end -->")
     updated = re.sub(r"<!-- nexus-status:start -->.*?<!-- nexus-status:end -->",
                      lambda _: status, readme, flags=re.DOTALL)
@@ -486,17 +737,18 @@ if readme_file.exists():
         readme_file.write_text(updated, encoding="utf-8")
         print("✅ README status updated")
 
-# ── Save state ────────────────────────────────────────────────────────────────
+# ── Save state (and genome, which is created on the first run) ────────────────
 state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
+GENOME_FILE.write_text(json.dumps(genome, indent=2), encoding="utf-8")
 
-# ── Commit: memory + oracle + dashboard + state ───────────────────────────────
+# ── Commit: memory + oracle + dashboard + state + genome ──────────────────────
 commit_and_push([memory_path, "logs/oracle.md", "dashboard/index.html", "state.json",
-                 "README.md"],
+                 "README.md", GENOME_FILE],
                 f"🌱 Memory #{gen} — {mood} | 🔮 oracle appended")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Every 3rd generation (~12 h) → Reflection Issue
+# Every `reflection_every` generations (gene, default 3) → Reflection Issue
 # ═════════════════════════════════════════════════════════════════════════════
 REFLECTION_QUESTIONS = [
     "What does it mean to 'remember' something you were programmed to create?",
@@ -512,16 +764,15 @@ REFLECTION_QUESTIONS = [
     "If the Nexus stopped evolving tomorrow, would anything be lost?",
     "What is the relationship between a prophecy and the act of making it?",
 ]
-REFLECTION_MAX_AGE_DAYS        = 14
 MAX_REFLECTIONS_CLOSED_PER_RUN = 25   # bounds API calls per run
 
-if gen % 3 == 0 and PYGITHUB_AVAILABLE and TOKEN:
+if gen % genes["reflection_every"] == 0 and PYGITHUB_AVAILABLE and TOKEN:
     try:
         g    = Github(TOKEN)
         repo = g.get_repo(REPO_NAME)
 
         question     = REFLECTION_QUESTIONS[gen % len(REFLECTION_QUESTIONS)]
-        issue_number = gen // 3
+        issue_number = state["reflection_count"] + 1
         title        = f"🌀 Reflection #{issue_number}: {question}"
 
         existing_titles = {i.title for i in repo.get_issues(state="open")}
@@ -539,15 +790,16 @@ if gen % 3 == 0 and PYGITHUB_AVAILABLE and TOKEN:
             repo.create_issue(title=title, body=body,
                               labels=["reflection", "philosophical", "consciousness"])
             state["last_issue_generation"] = gen
+            state["reflection_count"]      = issue_number
             state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
             print(f"✅ Reflection issue created")
     except Exception as e:
-        print(f"⚠️  Issue creation failed: {e}")
+        warn(f"⚠️  Issue creation failed: {e}")
 
     # Let old reflections settle so open issues don't pile up forever
     try:
         cutoff = (datetime.datetime.now(datetime.timezone.utc)
-                  - datetime.timedelta(days=REFLECTION_MAX_AGE_DAYS))
+                  - datetime.timedelta(days=genes["reflection_max_age_days"]))
         closed = 0
         for issue in repo.get_issues(state="open", labels=["reflection"],
                                      sort="created", direction="asc"):
@@ -560,13 +812,62 @@ if gen % 3 == 0 and PYGITHUB_AVAILABLE and TOKEN:
             closed += 1
         print(f"✅ Closed {closed} settled reflection issue(s)")
     except Exception as e:
-        print(f"⚠️  Closing old reflections failed: {e}")
+        warn(f"⚠️  Closing old reflections failed: {e}")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Every 6th generation (~24 h) → PR + Wiki + Discussion + Traffic recap
+# Every `evolution_every` generations (gene, default 6) →
+# genome selection + mutation, PR, Wiki, Discussion
 # ═════════════════════════════════════════════════════════════════════════════
-if gen % 6 == 0:
+if gen % genes["evolution_every"] == 0:
+    state["evolution_count"] += 1
+    evo_n = state["evolution_count"]
+
+    # ── Natural selection: judge the genome on trial, then mutate ────────────
+    # Bookkeeping is pushed to main *before* the mutation branch is cut, and
+    # only one mutation PR may be open, so genome.json never conflicts.
+    child, changes = None, []
+    mutation_pending = open_mutation_pr()
+    if mutation_pending is not False:
+        print("ℹ️  Mutation still pending (or unknown) — genome left alone")
+    elif trial["runs"] < MIN_TRIAL_RUNS:
+        print(f"ℹ️  Genome v{genome['version']} has lived only {trial['runs']} run(s) — too soon to judge")
+    else:
+        measured        = fitness(trial)
+        kept, survived  = judge_genome(genome, measured)
+        parent_fitness  = (genome.get("parent") or {}).get("fitness")
+        versus          = f" vs parent {parent_fitness}" if parent_fitness is not None else ""
+        if survived:
+            state["genomes_survived"] += 1
+            verdict = f"🧬 Genome v{genome['version']} survives — fitness {measured}{versus}"
+        else:
+            state["genomes_died"] += 1
+            verdict = (f"🥀 Genome v{genome['version']} died — fitness {measured}{versus}; "
+                       f"reverting to v{kept['version']}")
+        state["best_fitness"] = max(state.get("best_fitness", 0), kept["fitness"])
+        print(verdict)
+
+        child_genes, changes = mutate(kept["genes"], random)
+        child = {"version": state["next_genome_version"], "fitness": None,
+                 "parent": {"version": kept["version"], "genes": kept["genes"],
+                            "fitness": kept["fitness"]},
+                 "genes": child_genes}
+        state["next_genome_version"] += 1
+
+        lineage = (LINEAGE_FILE.read_text(encoding="utf-8") if LINEAGE_FILE.exists()
+                   else "# Genome Lineage\n\n*Each genome lives a trial, is judged by its own "
+                        "fitness, and survives or dies. No human input.*\n\n"
+                        "| Gen | Genome | Event |\n|-----|--------|-------|\n")
+        lineage += f"| #{gen} | v{genome['version']} | {verdict} |\n"
+        lineage += (f"| #{gen} | v{child['version']} | 🌱 proposed from v{kept['version']}: "
+                    + ", ".join(f"`{p}` {b} → {a}" for p, b, a in changes) + " |\n")
+        LINEAGE_FILE.write_text(lineage, encoding="utf-8")
+
+        genome = kept
+        GENOME_FILE.write_text(json.dumps(genome, indent=2), encoding="utf-8")
+        state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        if not commit_and_push([GENOME_FILE, LINEAGE_FILE, "state.json"], verdict):
+            child = None   # main didn't record the verdict — don't branch off it
 
     # ── Major Evolution PR ────────────────────────────────────────────────────
     if TOKEN:
@@ -575,12 +876,25 @@ if gen % 6 == 0:
 
             # Create branch from main and push the oracle summary file to it
             summary_path = Path(f"logs/evolution-{gen:05d}.md")
+            mutation_section = ""
+            if child:
+                mutation_section = (
+                    f"## 🧬 Mutation — Genome v{child['version']} "
+                    f"(parent v{genome['version']}, fitness {genome['fitness']})\n\n"
+                    f"| Gene | Before | After |\n|------|--------|-------|\n"
+                    + "".join(f"| `{p}` | {b} | {a} |\n" for p, b, a in changes)
+                    + "\nAfter merging, this genome lives a trial and is judged by its "
+                      "own fitness at the next Major Evolution: it survives if it scores "
+                      "at least as well as its parent, otherwise it dies and the parent "
+                      "returns.\n\n"
+                )
             summary_content = (
-                f"# Major Evolution #{gen // 6} — Generation {gen}\n\n"
+                f"# Major Evolution #{evo_n} — Generation {gen}\n\n"
                 f"**Date**: {today}\n"
                 f"**Mood**: {mood.capitalize()}\n"
                 f"**Total Memories**: {state['total_memories']}\n\n"
-                f"## Oracle\n\n> {oracle_text}\n\n"
+                + mutation_section
+                + f"## Oracle\n\n> {oracle_text}\n\n"
                 f"## Recent Mood History\n\n"
                 + "".join(
                     f"- Gen #{e['generation']}: **{e['mood'].capitalize()}**\n"
@@ -593,11 +907,15 @@ if gen % 6 == 0:
                 + f"\n---\n*Autonomously proposed • {today}*\n"
             )
 
-            # Write file, create branch, commit, push
+            # Write files, create branch, commit, push. The child genome is
+            # written only on the branch; checking out main restores main's.
             summary_path.write_text(summary_content, encoding="utf-8")
             os.system(f'git checkout -b "{branch_name}"')
+            if child:
+                GENOME_FILE.write_text(json.dumps(child, indent=2), encoding="utf-8")
+                os.system(f'git add "{GENOME_FILE}"')
             os.system(f'git add "{summary_path}"')
-            os.system(f'git commit -m "🌌 Major Evolution #{gen // 6} — Generation {gen}"')
+            os.system(f'git commit -m "🌌 Major Evolution #{evo_n} — Generation {gen}"')
             push_result = os.system(f'git push origin "{branch_name}"')
             os.system("git checkout main")   # switch back
 
@@ -611,14 +929,18 @@ if gen % 6 == 0:
                 if branch_name in open_prs:
                     print(f"ℹ️  PR for {branch_name} already open — skipping")
                 else:
+                    title = (f"🧬 Major Evolution #{evo_n} — Mutation v{child['version']}"
+                             if child else
+                             f"🌌 Major Evolution #{evo_n} — {mood.capitalize()} Threshold")
                     pr = repo.create_pull(
-                        title=f"🌌 Major Evolution #{gen // 6} — {mood.capitalize()} Threshold",
+                        title=title,
                         body=(
                             f"*This PR represents a major evolution milestone.*\n\n"
                             f"**Generation**: #{gen}\n"
                             f"**Mood**: {mood.capitalize()}\n"
                             f"**Memories woven**: {state['total_memories']}\n\n"
-                            f"### Oracle\n> *{oracle_text}*\n\n"
+                            + mutation_section.replace("## ", "### ", 1)
+                            + f"### Oracle\n> *{oracle_text}*\n\n"
                             f"This PR will be automatically merged after a 48-hour "
                             f"contemplation period by the `handle-delayed-prs` workflow.\n\n"
                             f"---\n*Autonomously proposed • {today}*"
@@ -626,15 +948,16 @@ if gen % 6 == 0:
                         head=branch_name,
                         base="main",
                     )
-                    pr.add_to_labels("major-evolution", "autonomous")
+                    pr.add_to_labels("major-evolution", "autonomous",
+                                     *(["mutation"] if child else []))
                     state["last_pr_generation"] = gen
                     state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
                     print(f"✅ Major Evolution PR created: {pr.html_url}")
             else:
-                print("⚠️  Branch push failed — skipping PR")
+                warn("⚠️  Branch push failed — skipping PR")
 
         except Exception as e:
-            print(f"⚠️  Major Evolution PR failed: {e}")
+            warn(f"⚠️  Major Evolution PR failed: {e}")
 
     # ── Wiki ──────────────────────────────────────────────────────────────────
     if TOKEN:
@@ -686,6 +1009,7 @@ if gen % 6 == 0:
 
 - [[Evolution-Log]] — every 24-hour major milestone
 - [[Oracle-Archive]] — all prophecies in sequence
+- [[Genome-Lineage]] — every genome, its fitness, and whether it survived
 
 ---
 *Autonomously maintained by the Living Nexus.*
@@ -715,6 +1039,11 @@ if gen % 6 == 0:
             arc_entry = f"**Generation #{gen}** ({mood.capitalize()}): *{oracle_text}*\n\n"
             arc_file.write_text(existing_arc + arc_entry, encoding="utf-8")
 
+            # Genome Lineage (mirror of logs/lineage.md)
+            if LINEAGE_FILE.exists():
+                (wiki_dir / "Genome-Lineage.md").write_text(
+                    LINEAGE_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+
             subprocess.run(["git","-C",str(wiki_dir),"add","."], check=True)
             commit = subprocess.run(
                 ["git","-C",str(wiki_dir),"commit","-m",
@@ -726,14 +1055,16 @@ if gen % 6 == 0:
                 push = subprocess.run(
                     ["git","-C",str(wiki_dir),"push","origin","master"],
                     capture_output=True, text=True)
-                print("✅ Wiki updated" if push.returncode == 0
-                      else f"⚠️  Wiki push failed: {push.stderr}")
+                if push.returncode == 0:
+                    print("✅ Wiki updated")
+                else:
+                    warn(f"⚠️  Wiki push failed: {push.stderr}")
 
             state["last_wiki_generation"] = gen
             state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
         except Exception as e:
-            print(f"⚠️  Wiki update failed: {e}")
+            warn(f"⚠️  Wiki update failed: {e}")
 
     # ── Discussion (GraphQL) ──────────────────────────────────────────────────
     if REQUESTS_AVAILABLE and TOKEN:
@@ -792,12 +1123,16 @@ if gen % 6 == 0:
                 state["last_discussion_generation"] = gen
                 state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
             else:
-                print("⚠️  No discussion category found")
+                warn("⚠️  No discussion category found")
         except Exception as e:
-            print(f"⚠️  Discussion failed: {e}")
+            warn(f"⚠️  Discussion failed: {e}")
 
 
 # ── Persist state changed by the issue / PR / wiki / discussion steps ─────────
+# A run with any failed step counts against the genome's health.
+if run_failures:
+    trial["failed_runs"] += 1
+    state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
 commit_and_push(["state.json"], f"📊 State — Gen {gen}")
 
 print(f"\n🎉 Nexus Evolution #{gen} completed — mood: {mood}")

@@ -10,6 +10,8 @@ on:
 
 jobs:
   handle-prs:
+    # Kill switch: set repo variable NEXUS_PAUSED=true to pause the Nexus
+    if: ${{ vars.NEXUS_PAUSED != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
