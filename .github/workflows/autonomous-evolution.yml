@@ -33,7 +33,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install PyGithub python-dateutil requests
+        run: pip install -r requirements.txt
 
       - name: Run Nexus Evolution
         env:

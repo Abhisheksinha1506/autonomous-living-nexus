@@ -27,7 +27,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install PyGithub python-dateutil requests
+        run: pip install -r requirements.txt
 
       - name: Process delayed PRs
         env:
@@ -73,6 +73,10 @@ jobs:
                   hrs = int(remaining.total_seconds() // 3600)
                   mins = int((remaining.total_seconds() % 3600) // 60)
                   print(f"  → Still in contemplation period ({hrs}h {mins}m remaining)")
+                  if any("Contemplation period in progress" in (c.body or "")
+                         for c in pr.get_issue_comments()):
+                      print("  → Contemplation notice already posted")
+                      continue
                   pr.create_issue_comment(
                       f"🕰️ **Contemplation period in progress.**\n\n"
                       f"This Major Evolution PR will be automatically merged in "

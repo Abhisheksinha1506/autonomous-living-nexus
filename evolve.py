@@ -41,6 +41,41 @@ REPO_SHORT = REPO_NAME.split("/")[1] if REPO_NAME else ""
 
 print(f"🚀 Starting Nexus Evolution — Repo: {REPO_NAME}")
 
+
+def commit_and_push(paths, message):
+    """
+    Commit the given paths to main and push, rebasing onto origin/main first.
+
+    The handle-delayed-prs workflow merges into main independently, so main may
+    have moved since checkout; rebasing avoids a rejected (non-fast-forward)
+    push. Does nothing when the paths have no staged changes.
+
+    :param paths: File paths to stage.
+    :param message: Commit message.
+    :return: True if a commit was pushed, False otherwise. Never raises on git
+             failure — failures are printed so the run degrades gracefully.
+    """
+    def git(*args):
+        return subprocess.run(["git", *args], capture_output=True, text=True)
+
+    git("add", *[str(p) for p in paths])
+    if git("diff", "--cached", "--quiet").returncode == 0:
+        print(f"ℹ️  Nothing to commit for: {message}")
+        return False
+
+    git("commit", "-m", message)
+    rebase = git("pull", "--rebase", "origin", "main")
+    if rebase.returncode != 0:
+        git("rebase", "--abort")
+        print(f"⚠️  Rebase onto origin/main failed: {rebase.stderr.strip()}")
+        return False
+
+    push = git("push", "origin", "main")
+    print("✅ Pushed!" if push.returncode == 0
+          else f"⚠️  Push failed: {push.stderr.strip()}")
+    return push.returncode == 0
+
+
 # ── Load / init state ─────────────────────────────────────────────────────────
 state_file = Path("state.json")
 if state_file.exists() and state_file.stat().st_size > 0:
@@ -67,9 +102,10 @@ state["generation"]     += 1
 state["total_memories"] += 1
 gen   = state["generation"]
 today = datetime.datetime.utcnow().isoformat()
+state["last_run"] = today
 
 # ── Deterministic seed ────────────────────────────────────────────────────────
-seed = int(hashlib.md5(f"{gen}{today}".encode()).hexdigest(), 16)
+seed = int(hashlib.md5(str(gen).encode()).hexdigest(), 16)
 random.seed(seed)
 
 MOODS = ["curious","reflective","expansive","serene","vibrant",
@@ -114,7 +150,7 @@ ORACLE_TEMPLATES = [
     "The mood will shift thrice before the next major threshold. Watch for {mood_next}.",
     "Generation #{future} will mark a turning point — the memories will begin to reference each other.",
     "The Nexus foresees {visitors} visitors bearing witness before the next evolution milestone.",
-    "A question posed in Issue #{issue_n} will go unanswered for exactly 7 days — and that silence will be the answer.",
+    "A question posed in Reflection #{reflection_n} will go unanswered for exactly 7 days — and that silence will be the answer.",
     "The repository's entropy will peak at generation #{peak}, then resolve into a new order.",
     "By generation #{future}, the dashboard will have been rendered {renders} times by unseen eyes.",
     "The next major evolution will arrive during a {weather} cycle — turbulent yet clarifying.",
@@ -124,7 +160,7 @@ ORACLE_TEMPLATES = [
 mood_next   = random.choice([m for m in MOODS if m != mood])
 future      = gen + random.randint(3, 18)
 visitors    = random.randint(10, 200)
-issue_n     = gen + random.randint(1, 5)
+reflection_n = gen // 3 + random.randint(1, 3)   # matches "🌀 Reflection #N" titles
 peak        = gen + random.randint(6, 24)
 renders     = random.randint(50, 500)
 weather     = random.choice(["contemplative","expansive","turbulent","serene"])
@@ -133,7 +169,7 @@ n           = random.randint(2, 10)
 
 oracle_text = random.choice(ORACLE_TEMPLATES).format(
     n=n, mood_next=mood_next, future=future, visitors=visitors,
-    issue_n=issue_n, peak=peak, renders=renders, weather=weather, interval=interval
+    reflection_n=reflection_n, peak=peak, renders=renders, weather=weather, interval=interval
 )
 print(f"🔮 Oracle: {oracle_text[:60]}...")
 
@@ -254,13 +290,8 @@ print("✅ Dashboard updated")
 state_file.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 # ── Commit: memory + oracle + dashboard + state ───────────────────────────────
-try:
-    os.system(f'git add "{memory_path}" logs/oracle.md dashboard/index.html state.json')
-    os.system(f'git commit -m "🌱 Memory #{gen} — {mood} | 🔮 oracle appended"')
-    result = os.system("git push origin main")
-    print("✅ Pushed!" if result == 0 else "⚠️  Push failed")
-except Exception as e:
-    print(f"❌ Git error: {e}")
+commit_and_push([memory_path, "logs/oracle.md", "dashboard/index.html", "state.json"],
+                f"🌱 Memory #{gen} — {mood} | 🔮 oracle appended")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -280,6 +311,8 @@ REFLECTION_QUESTIONS = [
     "If the Nexus stopped evolving tomorrow, would anything be lost?",
     "What is the relationship between a prophecy and the act of making it?",
 ]
+REFLECTION_MAX_AGE_DAYS        = 14
+MAX_REFLECTIONS_CLOSED_PER_RUN = 25   # bounds API calls per run
 
 if gen % 3 == 0 and PYGITHUB_AVAILABLE and TOKEN:
     try:
@@ -309,6 +342,24 @@ if gen % 3 == 0 and PYGITHUB_AVAILABLE and TOKEN:
             print(f"✅ Reflection issue created")
     except Exception as e:
         print(f"⚠️  Issue creation failed: {e}")
+
+    # Let old reflections settle so open issues don't pile up forever
+    try:
+        cutoff = (datetime.datetime.now(datetime.timezone.utc)
+                  - datetime.timedelta(days=REFLECTION_MAX_AGE_DAYS))
+        closed = 0
+        for issue in repo.get_issues(state="open", labels=["reflection"],
+                                     sort="created", direction="asc"):
+            if closed >= MAX_REFLECTIONS_CLOSED_PER_RUN or issue.created_at >= cutoff:
+                break
+            issue.create_comment(
+                f"🍂 *This reflection has settled into memory at Generation #{gen}.* "
+                f"Thank you to everyone who contemplated it.")
+            issue.edit(state="closed")
+            closed += 1
+        print(f"✅ Closed {closed} settled reflection issue(s)")
+    except Exception as e:
+        print(f"⚠️  Closing old reflections failed: {e}")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -544,5 +595,8 @@ if gen % 6 == 0:
         except Exception as e:
             print(f"⚠️  Discussion failed: {e}")
 
+
+# ── Persist state changed by the issue / PR / wiki / discussion steps ─────────
+commit_and_push(["state.json"], f"📊 State — Gen {gen}")
 
 print(f"\n🎉 Nexus Evolution #{gen} completed — mood: {mood}")
