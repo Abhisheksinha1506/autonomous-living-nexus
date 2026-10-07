@@ -1,66 +1,7 @@
 {
   "version": 2,
-  "fitness": null,
-  "parent": {
-    "version": 1,
-    "genes": {
-      "mood_base": {
-        "curious": 1,
-        "reflective": 1,
-        "expansive": 1,
-        "serene": 1,
-        "vibrant": 1,
-        "introspective": 1,
-        "playful": 1,
-        "contemplative": 1
-      },
-      "sense_bias": {
-        "new_followers": {
-          "vibrant": 3,
-          "playful": 2
-        },
-        "voices": {
-          "curious": 3,
-          "reflective": 2
-        },
-        "night": {
-          "serene": 2,
-          "introspective": 2
-        },
-        "quiet": {
-          "contemplative": 2
-        }
-      },
-      "reflection_every": 3,
-      "evolution_every": 6,
-      "reflection_max_age_days": 14,
-      "active_memory_lines": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9
-      ],
-      "active_oracle_templates": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9
-      ]
-    },
-    "fitness": 0.522
-  },
+  "fitness": 0.65,
+  "parent": null,
   "genes": {
     "mood_base": {
       "curious": 1,
