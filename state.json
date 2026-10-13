@@ -110,13 +110,13 @@
     }
   ],
   "last_issue_generation": 894,
-  "last_discussion_generation": 894,
-  "last_wiki_generation": 894,
-  "last_pr_generation": 894,
+  "last_discussion_generation": 895,
+  "last_wiki_generation": 895,
+  "last_pr_generation": 895,
   "traffic_views": 0,
   "traffic_clones": 0,
   "reflection_count": 298,
-  "evolution_count": 149,
+  "evolution_count": 150,
   "next_genome_version": 5,
   "genomes_survived": 3,
   "genomes_died": 0,
@@ -124,7 +124,7 @@
     "version": 4,
     "start_gen": 895,
     "runs": 1,
-    "failed_runs": 0,
+    "failed_runs": 1,
     "moods": [
       "contemplative"
     ],
