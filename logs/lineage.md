@@ -10,3 +10,5 @@
 | #876 | v3 | 🌱 proposed from v2: `active_oracle_templates` [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] → [0, 1, 3, 4, 5, 6, 7, 8, 9], `sense_bias.voices.reflective` 2 → 1 |
 | #888 | v3 | 🧬 Genome v3 survives — fitness 0.65 vs parent 0.65 |
 | #888 | v4 | 🌱 proposed from v3: `active_memory_lines` [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] → [0, 1, 2, 3, 5, 6, 7, 8, 9], `evolution_every` 6 → 5 |
+| #900 | v4 | 🥀 Genome v4 died — fitness 0.517 vs parent 0.65; reverting to v3 |
+| #900 | v5 | 🌱 proposed from v3: `evolution_every` 6 → 7, `reflection_every` 3 → 2 |
