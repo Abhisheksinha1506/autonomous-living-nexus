@@ -12,3 +12,5 @@
 | #888 | v4 | 🌱 proposed from v3: `active_memory_lines` [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] → [0, 1, 2, 3, 5, 6, 7, 8, 9], `evolution_every` 6 → 5 |
 | #900 | v4 | 🥀 Genome v4 died — fitness 0.517 vs parent 0.65; reverting to v3 |
 | #900 | v5 | 🌱 proposed from v3: `evolution_every` 6 → 7, `reflection_every` 3 → 2 |
+| #917 | v5 | 🧬 Genome v5 survives — fitness 0.656 vs parent 0.65 |
+| #917 | v6 | 🌱 proposed from v5: `active_memory_lines` [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] → [1, 2, 3, 4, 5, 6, 7, 8, 9] |
