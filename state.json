@@ -116,9 +116,9 @@
   "traffic_views": 0,
   "traffic_clones": 0,
   "reflection_count": 313,
-  "evolution_count": 155,
-  "next_genome_version": 7,
-  "genomes_survived": 4,
+  "evolution_count": 156,
+  "next_genome_version": 8,
+  "genomes_survived": 5,
   "genomes_died": 1,
   "trial": {
     "version": 6,
@@ -149,5 +149,5 @@
   },
   "last_heard_at": "2026-10-22T19:51:10Z",
   "total_heard": 0,
-  "best_fitness": 0.656
+  "best_fitness": 0.695
 }

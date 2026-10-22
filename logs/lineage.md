@@ -14,3 +14,5 @@
 | #900 | v5 | 🌱 proposed from v3: `evolution_every` 6 → 7, `reflection_every` 3 → 2 |
 | #917 | v5 | 🧬 Genome v5 survives — fitness 0.656 vs parent 0.65 |
 | #917 | v6 | 🌱 proposed from v5: `active_memory_lines` [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] → [1, 2, 3, 4, 5, 6, 7, 8, 9] |
+| #931 | v6 | 🧬 Genome v6 survives — fitness 0.695 vs parent 0.656 |
+| #931 | v7 | 🌱 proposed from v6: `reflection_max_age_days` 16 → 19 |
