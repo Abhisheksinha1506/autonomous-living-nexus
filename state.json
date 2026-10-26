@@ -116,10 +116,10 @@
   "traffic_views": 0,
   "traffic_clones": 0,
   "reflection_count": 320,
-  "evolution_count": 157,
-  "next_genome_version": 8,
+  "evolution_count": 158,
+  "next_genome_version": 9,
   "genomes_survived": 5,
-  "genomes_died": 1,
+  "genomes_died": 2,
   "trial": {
     "version": 7,
     "start_gen": 940,
