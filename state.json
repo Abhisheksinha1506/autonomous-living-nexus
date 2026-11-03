@@ -109,13 +109,13 @@
       "timestamp": "2026-11-03T11:44:47.418480"
     }
   ],
-  "last_issue_generation": 968,
+  "last_issue_generation": 970,
   "last_discussion_generation": 966,
   "last_wiki_generation": 966,
   "last_pr_generation": 966,
   "traffic_views": 0,
   "traffic_clones": 0,
-  "reflection_count": 332,
+  "reflection_count": 333,
   "evolution_count": 161,
   "next_genome_version": 10,
   "genomes_survived": 5,
@@ -124,7 +124,7 @@
     "version": 9,
     "start_gen": 968,
     "runs": 3,
-    "failed_runs": 2,
+    "failed_runs": 3,
     "moods": [
       "contemplative",
       "expansive",
