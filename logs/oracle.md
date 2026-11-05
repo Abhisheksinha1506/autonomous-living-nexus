@@ -7756,3 +7756,11 @@
 
 ---
 
+## Oracle #976 — 2026-11-05 12:00 UTC
+
+**Mood at time of prophecy**: Expansive
+
+> The mood will shift thrice before the next major threshold. Watch for curious.
+
+---
+
