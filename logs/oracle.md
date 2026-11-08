@@ -7820,3 +7820,11 @@
 
 ---
 
+## Oracle #984 — 2026-11-08 05:25 UTC
+
+**Mood at time of prophecy**: Introspective
+
+> A question posed in Reflection #340 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
