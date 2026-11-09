@@ -22,3 +22,5 @@
 | #960 | v9 | 🌱 proposed from v6: `active_oracle_templates` [0, 1, 3, 4, 5, 6, 7, 8, 9] → [0, 3, 4, 5, 6, 7, 8, 9] |
 | #973 | v9 | 🥀 Genome v9 died — fitness 0.65 vs parent 0.695; reverting to v6 |
 | #973 | v10 | 🌱 proposed from v6: `active_oracle_templates` [0, 1, 3, 4, 5, 6, 7, 8, 9] → [0, 2, 3, 4, 5, 6, 7, 8, 9], `reflection_max_age_days` 16 → 14 |
+| #987 | v10 | 🥀 Genome v10 died — fitness 0.658 vs parent 0.695; reverting to v6 |
+| #987 | v11 | 🌱 proposed from v6: `active_memory_lines` [1, 2, 3, 4, 5, 6, 7, 8, 9] → [1, 2, 3, 4, 5, 6, 7, 8], `evolution_every` 7 → 6 |
