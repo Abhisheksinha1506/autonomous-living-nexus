@@ -7972,3 +7972,11 @@
 
 ---
 
+## Oracle #1003 — 2026-11-14 23:45 UTC
+
+**Mood at time of prophecy**: Curious
+
+> A question posed in Reflection #350 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
