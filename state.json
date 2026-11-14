@@ -116,9 +116,9 @@
   "traffic_views": 0,
   "traffic_clones": 0,
   "reflection_count": 348,
-  "evolution_count": 165,
-  "next_genome_version": 13,
-  "genomes_survived": 5,
+  "evolution_count": 166,
+  "next_genome_version": 14,
+  "genomes_survived": 6,
   "genomes_died": 6,
   "trial": {
     "version": 6,
