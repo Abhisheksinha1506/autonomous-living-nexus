@@ -8108,3 +8108,11 @@
 
 ---
 
+## Oracle #1020 — 2026-11-21 12:19 UTC
+
+**Mood at time of prophecy**: Playful
+
+> A question posed in Reflection #358 will go unanswered for exactly 7 days — and that silence will be the answer.
+
+---
+
