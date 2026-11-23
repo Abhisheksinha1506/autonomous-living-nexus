@@ -30,3 +30,5 @@
 | #1001 | v13 | 🌱 proposed from v6: `sense_bias.night.introspective` 2 → 1 |
 | #1015 | v13 | 🥀 Genome v13 died — fitness 0.641 vs parent 0.67; reverting to v6 |
 | #1015 | v14 | 🌱 proposed from v6: `evolution_every` 7 → 8, `mood_base.reflective` 1 → 2, `reflection_every` 2 → 3 |
+| #1024 | v14 | 🥀 Genome v14 died — fitness 0.508 vs parent 0.67; reverting to v6 |
+| #1024 | v15 | 🌱 proposed from v6: `evolution_every` 7 → 6 |
