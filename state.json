@@ -124,7 +124,7 @@
     "version": 15,
     "start_gen": 1029,
     "runs": 1,
-    "failed_runs": 0,
+    "failed_runs": 1,
     "moods": [
       "playful"
     ],
