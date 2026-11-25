@@ -1,18 +1,13 @@
 {
-  "generation": 1028,
-  "total_memories": 1028,
+  "generation": 1029,
+  "total_memories": 1029,
   "total_issues": 2,
   "total_prs": 1,
   "total_wiki_entries": 1,
   "total_discussions": 1,
-  "mood": "vibrant",
-  "last_run": "2026-11-25T00:28:56.637310",
+  "mood": "playful",
+  "last_run": "2026-11-25T14:01:16.905124",
   "mood_history": [
-    {
-      "mood": "contemplative",
-      "generation": 1009,
-      "timestamp": "2026-11-17T02:50:16.153519"
-    },
     {
       "mood": "vibrant",
       "generation": 1010,
@@ -107,6 +102,11 @@
       "mood": "vibrant",
       "generation": 1028,
       "timestamp": "2026-11-25T00:28:56.637310"
+    },
+    {
+      "mood": "playful",
+      "generation": 1029,
+      "timestamp": "2026-11-25T14:01:16.905124"
     }
   ],
   "last_issue_generation": 1028,
@@ -121,21 +121,15 @@
   "genomes_survived": 6,
   "genomes_died": 8,
   "trial": {
-    "version": 6,
-    "start_gen": 1025,
-    "runs": 4,
-    "failed_runs": 4,
+    "version": 15,
+    "start_gen": 1029,
+    "runs": 1,
+    "failed_runs": 0,
     "moods": [
-      "curious",
-      "contemplative",
-      "vibrant",
-      "vibrant"
+      "playful"
     ],
     "lines": [
-      9,
-      1,
-      2,
-      3
+      4
     ]
   },
   "senses": {
@@ -143,7 +137,7 @@
     "forks": 0,
     "watchers": 0
   },
-  "last_heard_at": "2026-11-25T00:28:56Z",
+  "last_heard_at": "2026-11-25T14:01:17Z",
   "total_heard": 0,
   "best_fitness": 0.695
 }
