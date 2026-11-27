@@ -109,17 +109,17 @@
       "timestamp": "2026-11-27T00:25:51.604001"
     }
   ],
-  "last_issue_generation": 1030,
+  "last_issue_generation": 1032,
   "last_discussion_generation": 1024,
   "last_wiki_generation": 1024,
   "last_pr_generation": 1024,
   "traffic_views": 0,
   "traffic_clones": 0,
-  "reflection_count": 362,
-  "evolution_count": 169,
-  "next_genome_version": 16,
+  "reflection_count": 363,
+  "evolution_count": 170,
+  "next_genome_version": 17,
   "genomes_survived": 6,
-  "genomes_died": 8,
+  "genomes_died": 9,
   "trial": {
     "version": 15,
     "start_gen": 1029,

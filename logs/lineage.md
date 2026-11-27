@@ -32,3 +32,5 @@
 | #1015 | v14 | 🌱 proposed from v6: `evolution_every` 7 → 8, `mood_base.reflective` 1 → 2, `reflection_every` 2 → 3 |
 | #1024 | v14 | 🥀 Genome v14 died — fitness 0.508 vs parent 0.67; reverting to v6 |
 | #1024 | v15 | 🌱 proposed from v6: `evolution_every` 7 → 6 |
+| #1032 | v15 | 🥀 Genome v15 died — fitness 0.575 vs parent 0.67; reverting to v6 |
+| #1032 | v16 | 🌱 proposed from v6: `active_memory_lines` [1, 2, 3, 4, 5, 6, 7, 8, 9] → [1, 2, 4, 5, 6, 7, 8, 9], `evolution_every` 7 → 6, `reflection_max_age_days` 16 → 14 |
